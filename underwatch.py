@@ -8,98 +8,119 @@ import cv2 as cv
 
 class Underwatch():
     def __init__(self) -> None:
+        self.last_update = 0
+        self.min_update_period = 0.1
+        self.score = 0
+        self.decay = 4
+        self.detection_delay = 0
         self.computer_vision_setup()
         self.detectables_setup()
-        self.last_popup_update = 0;
     
     def computer_vision_setup(self):
         self.monitor = mss.mss().monitors[1]
         print("Monitor detected: {0}".format(self.monitor))
         self.debug_frame = None
-        self.sat = 50
-        self.value = 130
 
     def detectables_setup(self):
         self.regions = {}
-        popupLeft = 780
-        popupRight = 960
-        self.regions["Popup1"] = {"Rect": [750, 780, popupLeft, popupRight]}
-        self.regions["Popup2"] = {"Rect": [785, 815, popupLeft, popupRight]}
-        self.regions["Popup3"] = {"Rect": [820, 850, popupLeft, popupRight]}
         self.regions["KillcamOrPOTG"] = {"Rect": [110, 160, 1200, 1400]}
+        popup_left = 780
+        popup_right = 960
+        self.regions["Popup1"] = {"Rect": [750, 780, popup_left, popup_right]}
+        self.regions["Popup2"] = {"Rect": [785, 815, popup_left, popup_right]}
+        self.regions["Popup3"] = {"Rect": [820, 850, popup_left, popup_right]}
         self.regions["ApplyHarmony"] = {"Rect": [945, 995, 725, 775]}
         self.regions["ApplyDiscord"] = {"Rect": [945, 995, 1145, 1195]}
-        self.regions["ApplyMercyHeal"] = {"Rect": [655, 725, 790, 860]}
-        self.regions["ApplyMercyBoost"] = {"Rect": [655, 725, 790+270, 860+270]}
+        self.regions["ApplyMercyHeal"] = {"Rect": [655, 723, 790, 858]}
+        self.regions["ApplyMercyBoost"] = {"Rect": [655, 723, 1062, 1130]}
         self.regions["ReceiveMercyOrZen"] = {"Rect": [740, 840, 440, 650]}
 
         for region in self.regions:
             self.scale_to_monitor(self.regions[region]["Rect"])
+            self.regions[region]["Match"] = None
 
         self.detectables = {}
-        self.detectables["KillcamOrPOTG"] = {"Filename": "killcam_potg_sobel.png", "Threshold": .95}
-        self.detectables["Elimination"] = {"Filename": "elimination.png", "Threshold": .8}
-        self.detectables["Assist"] = {"Filename": "assist.png", "Threshold": .8}
-        self.detectables["Saved"] = {"Filename": "saved.png", "Threshold": .8}
+        self.detectables["KillcamOrPOTG"] = {"Filename": "killcam_potg_sobel.png", "Threshold": .95, "Points": 0}
 
-        self.detectables["ApplyHarmony"] = {"Filename": "apply_harmony.png", "Threshold": .9}
-        self.detectables["ApplyDiscord"] = {"Filename": "apply_discord.png", "Threshold": .9}
+        self.detectables["Elimination"] = {"Filename": "elimination.png", "Threshold": .8, "Points": 20}
+        self.detectables["Assist"] = {"Filename": "assist.png", "Threshold": .8, "Points": 15}
+        self.detectables["Saved"] = {"Filename": "saved.png", "Threshold": .8, "Points": 25}
 
-        self.detectables["ApplyMercyBoost"] = {"Filename": "apply_mercy_boost.png", "Threshold": .9}
-        self.detectables["ApplyMercyHeal"] = {"Filename": "apply_mercy_heal.png", "Threshold": .9}
+        self.detectables["ApplyHarmony"] = {"Filename": "apply_harmony.png", "Threshold": .9, "Points": 0}
+        self.detectables["ApplyDiscord"] = {"Filename": "apply_discord.png", "Threshold": .9, "Points": 0}
 
-        self.detectables["ReceiveZenHeal"] = {"Filename": "receive_zen_heal.png", "Threshold": .9}
-        self.detectables["ReceiveMercyHeal"] = {"Filename": "receive_mercy_heal.png", "Threshold": .9}
-        self.detectables["ReceiveMercyBoost"] = {"Filename": "receive_mercy_boost.png", "Threshold": .9}
+        self.detectables["ApplyMercyBoost"] = {"Filename": "apply_mercy_boost.png", "Threshold": .7, "Points": 2}
+        self.detectables["ApplyMercyHeal"] = {"Filename": "apply_mercy_heal.png", "Threshold": .7, "Points": 1}
 
+        self.detectables["ReceiveZenHeal"] = {"Filename": "receive_zen_heal.png", "Threshold": .8, "Points": 0}
+        self.detectables["ReceiveMercyHeal"] = {"Filename": "receive_mercy_heal.png", "Threshold": .8, "Points": 0}
+        self.detectables["ReceiveMercyBoost"] = {"Filename": "receive_mercy_boost.png", "Threshold": .8, "Points": 0}
 
         for item in self.detectables:
+            
             self.detectables[item]["Template"] = self.load_and_scale_template(self.detectables[item]["Filename"])
             if item in ["Elimination", "Assist", "Saved"]:
                 self.detectables[item]["Template"] = self.popup_filter(self.detectables[item]["Template"])
 
-    async def update(self, debug=True):
-
-
+    async def update(self):
         t0 = time.time()
-        #self.update_killcam_or_potg()
-        #self.update_popup_detection()
-        #self.update_other_detections()
+        if (t0 - self.last_update < self.min_update_period):
+            return
+        delta_time = min(1, t0 - self.last_update)
+        self.last_update = t0
+
+        for r in self.regions:
+            self.regions[r]["Match"] = None
+        for d in self.detectables:
+            self.detectables[d]["Count"] = 0
+
+        self.grab_frame_cropped_to_regions(["KillcamOrPOTG"])
+        on_killcam = self.update_killcam_or_potg()
+        
+        if (on_killcam == False):
+            regions_to_crop = [r for r in self.regions if r != "KillcamOrPOTG"]
+            self.grab_frame_cropped_to_regions(regions_to_crop)
+            self.update_popup_detection()
+            self.update_other_detections()
+
+        for d in self.detectables:
+            self.score += delta_time * self.detectables[d]["Count"] * self.detectables[d]["Points"]
+        self.score -= delta_time * self.decay
+        self.score = max(0, self.score)
+
         t1 = time.time()
-
-        if debug:
-            print("       Total update time: {0:.2f}ms \n".format(1000*(t1-t0)))
-
-        time.sleep(max(0, .4 - (t1-t0)))
+        a = .05
+        self.detection_delay = (1-a)*self.detection_delay + a*(t1-t0)
 
     def update_killcam_or_potg(self):
-        self.grab_frame_cropped_to_regions(["KillcamOrPOTG"], debug=True)
-        match = self.match_detectables_on_region("KillcamOrPOTG", ["KillcamOrPOTG"], self.sobel_operation, debug=True)
-        self.regions["KillcamOrPOTG"]["Label"].setHidden(match is None)
+        match = self.match_detectables_on_region("KillcamOrPOTG", ["KillcamOrPOTG"], operation = self.sobel_operation)
+        return match is not None
 
     def update_popup_detection(self):
         popupRegions = ["Popup1", "Popup2", "Popup3"]
         popupsToDetect = ["Elimination", "Assist", "Saved"]
         
-        self.grab_frame_cropped_to_regions(popupRegions, debug=True)
         for region in popupRegions:
-            match = self.match_detectables_on_region(region, popupsToDetect, operation=self.popup_filter, debug=True)
-            self.regions[region]["Label"].setHidden(match is None)
+            self.match_detectables_on_region(region, popupsToDetect, operation = self.popup_filter)
 
     def update_other_detections(self):
-        desiredDetections = ["ApplyHarmony", "ApplyDiscord", "ApplyMercyBoost", "ApplyMercyHeal"]
-        self.grab_frame_cropped_to_regions(desiredDetections, debug=True)
-        for item in desiredDetections:
-            match = self.match_detectables_on_region(item, [item], debug=True)
-            self.regions[item]["Label"].setHidden(match is None)
+        for item in ["ApplyHarmony", "ApplyDiscord", "ApplyMercyBoost", "ApplyMercyHeal"]:
+            self.match_detectables_on_region(item, [item])
 
-    def grab_frame_cropped_to_regions(self, regionNames, debug=False):
-        t0 = time.time()
+        zen_match = self.match_detectables_on_region("ReceiveMercyOrZen", ["ReceiveZenHeal"])
+        mercy_match = self.match_detectables_on_region("ReceiveMercyOrZen", ["ReceiveMercyBoost", "ReceiveMercyHeal"])
+        if (mercy_match is None):
+            self.regions["ReceiveMercyOrZen"]["Match"] = zen_match
+        elif (zen_match is not None):
+            self.regions["ReceiveMercyOrZen"]["Match"] += "+ZenHeal"
+
+    def grab_frame_cropped_to_regions(self, regionNames):
         top = self.monitor["height"]
         left = self.monitor["width"]
         bottom = 0
         right = 0
 
+        # Find rect that encompasses all regions
         for region in regionNames:
             rect = self.regions[region]["Rect"]
             top = min(top, rect[0])
@@ -110,13 +131,8 @@ class Underwatch():
         self.frame_offset = (top, left)
         with mss.mss() as sct:
             self.frame = np.array(sct.grab((left, top, right, bottom)))[:,:,:3]
-
-        if debug:
-            print("Grab for {0}".format(regionNames))
-            print("   {0:.2f}ms".format(1000*(time.time()-t0)))
     
-    def match_detectables_on_region(self, regionKey, detectableKeys, operation=None, debug=False):
-        t0 = time.time()
+    def match_detectables_on_region(self, regionKey, detectableKeys, operation = None):
         crop = self.get_cropped_frame_copy(self.regions[regionKey]["Rect"])
         if (operation is not None):
             crop = operation(crop)
@@ -126,12 +142,10 @@ class Underwatch():
             match_max_value = self.match_template(crop, self.detectables[d]["Template"])
             if match_max_value > self.detectables[d]["Threshold"]:
                 match = d
+                self.detectables[match]["Count"] += 1
                 break
-
-        if debug:
-            print("Matched {0} in {1}".format(match, regionKey))
-            print("   {0:.2f}ms".format(1000*(time.time()-t0)))
-
+        
+        self.regions[regionKey]["Match"] = match
         return match
     
     def match_template(self, frame, template):
@@ -146,7 +160,9 @@ class Underwatch():
         left = max(0, right - 50)
         mean = cv.mean(gray[:,left:right])
         
-        mask = cv.inRange(gray, int(mean[0]-self.sat), int(0.5*mean[0]+self.value))
+        sat = 50
+        value = 130
+        mask = cv.inRange(gray, int(mean[0] - sat), int( 0.5*mean[0] + value))
         frame[(mask==0)] = [255, 255, 255]
         frame[(mask==255)] = [0, 0, 0]
         return frame

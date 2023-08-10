@@ -1,9 +1,10 @@
-import sys, asyncio
+import sys
+import asyncio
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
 from PyQt5.QtGui import QImage, QPixmap
 
-from overlay import *
+from overlay import Overlay
 from underwatch import Underwatch
 
 class FrontEnd(QMainWindow):
@@ -29,9 +30,6 @@ class FrontEnd(QMainWindow):
         self.tabs = QTabWidget(self)
         self.layout.addWidget(self.tabs, 0, 0)
 
-        self.debug_tab = DebugTab(self, self.underwatch)
-        self.tabs.addTab(self.debug_tab, "Debug")
-
         self.overlayTab = OverlayTab(self, self.underwatch)
         self.tabs.addTab(self.overlayTab, "Overlay")
 
@@ -42,47 +40,38 @@ class FrontEnd(QMainWindow):
     async def background_thread_loop(self):
         while True:
             await self.underwatch.update()
-            await self.debug_tab.update()
+            self.overlayTab.overlay.update()
             await asyncio.sleep(0.01)
-
-class DebugTab(QWidget):
-    def __init__(self, parent, underwatch) -> None:
-        super(DebugTab, self).__init__(parent)
-        self.underwatch = underwatch
-
-        layout = QGridLayout()
-        self.setLayout(layout)
-
-        self.image_label = QLabel("", self)
-        layout.addWidget(self.image_label, 0 , 0, 10, 10)
-
-        self.saturation = QSpinBox(self)
-        self.saturation.setMaximum(255)
-        self.saturation.setValue(self.underwatch.sat)
-        self.saturation.valueChanged.connect(self.update_values)
-        layout.addWidget(self.saturation, 0 , 0)
-        self.value = QSpinBox(self)
-        self.value.setMaximum(255)
-        self.value.setValue(self.underwatch.value)
-        self.value.valueChanged.connect(self.update_values)
-        layout.addWidget(self.value, 1 , 0)
-
-    def update_values(self):
-        self.underwatch.sat = self.saturation.value()
-        self.underwatch.value = self.value.value()
-
-    async def update(self):
-        if(self.underwatch.debug_frame is not None):
-            set_image_to_label(self.underwatch.debug_frame, self.image_label)
 
 class OverlayTab(QWidget):
     def __init__(self, parent, underwatch) -> None:
         super(OverlayTab, self).__init__(parent)
+
         self.overlay = Overlay(underwatch)
         self.overlay.show()
 
-        self.toggle_overlay_btn = QPushButton("Toggle Overlay", self)
-        self.toggle_overlay_btn.clicked.connect(self.overlay.toggle_on_off)
+        layout = QGridLayout()
+        self.setLayout(layout)
+
+        self.show_overlay_mode_label = QLabel("Show Overlay: ")
+        layout.addWidget(self.show_overlay_mode_label,0,0)
+        self.show_overlay_mode = QComboBox()
+        layout.addWidget(self.show_overlay_mode,0,1)
+        self.show_overlay_mode.addItem("Never")
+        self.show_overlay_mode.addItem("Always")
+        self.show_overlay_mode.addItem("When Overwatch Is Focused")
+        self.show_overlay_mode.currentIndexChanged.connect(self.overlay.update_show_overlay_mode)
+        self.show_overlay_mode.setCurrentIndex(2)
+
+        self.show_detection_regions_label = QLabel("Show Detection Regions: ")
+        layout.addWidget(self.show_detection_regions_label,1,0)
+        self.show_detection_regions_mode = QComboBox()
+        layout.addWidget(self.show_detection_regions_mode,1,1)
+        self.show_detection_regions_mode.addItem("Never")
+        self.show_detection_regions_mode.addItem("Always")
+        self.show_detection_regions_mode.addItem("When Detection Occurs")
+        self.show_detection_regions_mode.currentIndexChanged.connect(self.overlay.update_show_regions_mode)
+        self.show_detection_regions_mode.setCurrentIndex(2)
 
 class DetectablesTab(QWidget):
     def __init__(self, parent, underwatch) -> None:
