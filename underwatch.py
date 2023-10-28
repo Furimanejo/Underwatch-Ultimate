@@ -40,11 +40,11 @@ class Underwatch():
             self.regions[region]["Match"] = None
 
         self.detectables = {}
-        self.detectables["KillcamOrPOTG"] = {"Filename": "killcam_potg_sobel.png", "Threshold": .95, "Points": 0}
+        self.detectables["KillcamOrPOTG"] = {"Filename": "killcam_potg_sobel.png", "Threshold": .95}
 
-        self.detectables["Elimination"] = {"Filename": "elimination.png", "Threshold": .8, "Points": 20}
-        self.detectables["Assist"] = {"Filename": "assist.png", "Threshold": .8, "Points": 15}
-        self.detectables["Saved"] = {"Filename": "saved.png", "Threshold": .8, "Points": 25}
+        self.detectables["Elimination"] = {"Filename": "elimination.png", "Threshold": .8, "Points": 25}
+        self.detectables["Assist"] = {"Filename": "assist.png", "Threshold": .8, "Points": 20}
+        self.detectables["Saved"] = {"Filename": "saved.png", "Threshold": .8, "Points": 30}
 
         self.detectables["ApplyHarmony"] = {"Filename": "apply_harmony.png", "Threshold": .9, "Points": 0}
         self.detectables["ApplyDiscord"] = {"Filename": "apply_discord.png", "Threshold": .9, "Points": 0}
@@ -82,10 +82,18 @@ class Underwatch():
             self.grab_frame_cropped_to_regions(regions_to_crop)
             self.update_popup_detection()
             self.update_other_detections()
+        
+        elims = self.detectables["Elimination"]["Count"] * self.detectables["Elimination"]["Points"]
+        assists = self.detectables["Assist"]["Count"] * self.detectables["Assist"]["Points"]
+        saved = self.detectables["Saved"]["Count"] * self.detectables["Saved"]["Points"]
+        
+        total = (max(elims, assists) + saved) / 2.5
 
-        for d in self.detectables:
-            self.score += delta_time * self.detectables[d]["Count"] * self.detectables[d]["Points"]
-        self.score -= delta_time * self.decay
+        if (total > 0):
+            self.score += delta_time * total
+        else:
+            self.score -= delta_time * self.decay
+
         self.score = max(0, self.score)
 
         t1 = time.time()
