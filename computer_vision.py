@@ -42,19 +42,19 @@ class ComputerVision():
         self.detectables = {}
         self.detectables["KillcamOrPOTG"] = {"Filename": "killcam_potg_sobel.png", "Threshold": .95}
 
-        self.detectables["Elimination"] = {"Filename": "elimination.png", "Threshold": .8, "Points": 25}
-        self.detectables["Assist"] = {"Filename": "assist.png", "Threshold": .8, "Points": 20}
-        self.detectables["Saved"] = {"Filename": "saved.png", "Threshold": .8, "Points": 30}
+        self.detectables["Elimination"] = {"Filename": "elimination.png", "Threshold": .8, "Points": 25, "PointsType": 0}
+        self.detectables["Assist"] = {"Filename": "assist.png", "Threshold": .8, "Points": 20,"PointsType": 0}
+        self.detectables["Saved"] = {"Filename": "saved.png", "Threshold": .8, "Points": 30,"PointsType": 0}
 
-        self.detectables["ApplyHarmony"] = {"Filename": "apply_harmony.png", "Threshold": .9, "Points": 0}
-        self.detectables["ApplyDiscord"] = {"Filename": "apply_discord.png", "Threshold": .9, "Points": 0}
+        self.detectables["ApplyHarmony"] = {"Filename": "apply_harmony.png", "Threshold": .9, "Points": 15, "PointsType": 1}
+        self.detectables["ApplyDiscord"] = {"Filename": "apply_discord.png", "Threshold": .9, "Points": 15, "PointsType": 1}
 
-        self.detectables["ApplyMercyBoost"] = {"Filename": "apply_mercy_boost.png", "Threshold": .7, "Points": 2}
-        self.detectables["ApplyMercyHeal"] = {"Filename": "apply_mercy_heal.png", "Threshold": .7, "Points": 1}
+        self.detectables["ApplyMercyBoost"] = {"Filename": "apply_mercy_boost.png", "Threshold": .7, "Points": 20, "PointsType": 1}
+        self.detectables["ApplyMercyHeal"] = {"Filename": "apply_mercy_heal.png", "Threshold": .7, "Points": 30, "PointsType": 1}
 
-        self.detectables["ReceiveZenHeal"] = {"Filename": "receive_zen_heal.png", "Threshold": .8, "Points": 0}
-        self.detectables["ReceiveMercyHeal"] = {"Filename": "receive_mercy_heal.png", "Threshold": .8, "Points": 0}
-        self.detectables["ReceiveMercyBoost"] = {"Filename": "receive_mercy_boost.png", "Threshold": .8, "Points": 0}
+        self.detectables["ReceiveZenHeal"] = {"Filename": "receive_zen_heal.png", "Threshold": .8, "Points": 10, "PointsType": 1}
+        self.detectables["ReceiveMercyHeal"] = {"Filename": "receive_mercy_heal.png", "Threshold": .8, "Points": 10, "PointsType": 1}
+        self.detectables["ReceiveMercyBoost"] = {"Filename": "receive_mercy_boost.png", "Threshold": .8, "Points": 25, "PointsType": 1}
 
         for item in self.detectables:
             

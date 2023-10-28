@@ -1,8 +1,9 @@
 import sys
 import asyncio
+from tkinter import Grid
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtGui import QImage, QPixmap, QFont
 
 from computer_vision import ComputerVision
 from overlay import Overlay
@@ -10,16 +11,18 @@ from overlay import Overlay
 class GUI(QMainWindow):
     def __init__(self) -> None:
         super(GUI, self).__init__()
-        self.computer_vision = ComputerVision()
-
         self.setWindowTitle("Underwatch")
-        self.move(1920, 0)
-        self.resize(800, 600)
+        self.resize(600, 400)
+        #self.move(1920, 0)
+        qApp.setStyleSheet("QWidget{font-size:18px;}")
+
+
         centralWidget = QWidget(self)
         self.setCentralWidget(centralWidget)
         self.layout = QGridLayout()
         centralWidget.setLayout(self.layout)
 
+        self.computer_vision = ComputerVision()
         self.setup_tabs();
         self.show()
 
@@ -30,18 +33,71 @@ class GUI(QMainWindow):
         self.tabs = QTabWidget(self)
         self.layout.addWidget(self.tabs, 0, 0)
 
+        self.underwatch_tab = UnderwatchTab(self, self.computer_vision)
+        self.underwatch_tab.setStyleSheet("border: 1px solid red;")
+        self.tabs.addTab(self.underwatch_tab, "Underwatch")
+
         self.overlayTab = OverlayTab(self, self.computer_vision)
         self.tabs.addTab(self.overlayTab, "Overlay")
 
-        self.detectablesTab = DetectablesTab(self, self.computer_vision)
-        self.detectablesTab.setStyleSheet("border: 1px solid red;")
-        self.tabs.addTab(self.detectablesTab, "Detectables")
-    
     async def background_thread_loop(self):
         while True:
             await self.computer_vision.update()
             self.overlayTab.overlay.update()
             await asyncio.sleep(0.01)
+
+class UnderwatchTab(QWidget):
+    def __init__(self, parent, computer_vision) -> None:
+        super(UnderwatchTab, self).__init__(parent)
+
+        detectables_layout = QGridLayout()
+        self.setLayout(detectables_layout)
+        for item in computer_vision.detectables.items():
+            if ("Killcam" in item[0]):
+                continue
+            detectable = UnderwatchTab.DetectableWidget(self, item)
+            detectables_layout.addWidget(detectable)
+
+    class DetectableWidget(QWidget):
+        def __init__(self, parent, detectable) -> None:
+            super(UnderwatchTab.DetectableWidget, self).__init__(parent)
+            self.detectable = detectable
+
+            layout = QGridLayout(self)
+            layout.setContentsMargins(0,0,0,0)
+            mininum_height = 40
+
+            name  = detectable[0]
+            label = QLabel(text = name, parent = self)
+            label.setMinimumHeight(mininum_height)
+
+            image = QLabel("", self)
+            image.setMinimumHeight(mininum_height)
+            image.setMinimumWidth(80)
+            image.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            set_image_to_label(detectable[1]["Template"], image)
+
+            spin_box = QSpinBox(self)
+            spin_box.setMinimumHeight(mininum_height)
+            spin_box.setValue(detectable[1]["Points"])
+            spin_box.setMaximum(999)
+            spin_box.setMinimum(-999)
+            #slider = QSlider(Qt.Orientation.Horizontal, self)
+            
+            combo_box = QComboBox(self)
+            combo_box.setMinimumHeight(mininum_height)
+            combo_box.setMinimumWidth(180)
+            combo_box.addItem("Points per Second")
+            combo_box.addItem("Points (instant)")
+            combo_box.setCurrentIndex(detectable[1]["PointsType"])
+
+            layout.addWidget(image, 0, 0)
+            layout.addWidget(label, 0, 1)
+            layout.addWidget(spin_box, 0, 2)
+            layout.addWidget(combo_box, 0, 3)
+
+            layout.setColumnStretch(1, 1)
+
 
 class OverlayTab(QWidget):
     def __init__(self, parent, underwatch) -> None:
@@ -72,32 +128,6 @@ class OverlayTab(QWidget):
         self.show_detection_regions_mode.addItem("When Detection Occurs")
         self.show_detection_regions_mode.currentIndexChanged.connect(self.overlay.update_show_regions_mode)
         self.show_detection_regions_mode.setCurrentIndex(2)
-
-class DetectablesTab(QWidget):
-    def __init__(self, parent, underwatch) -> None:
-        super(DetectablesTab, self).__init__(parent)
-
-        layout = QGridLayout()
-        self.setLayout(layout)
-        row = 0
-        for item in underwatch.detectables:
-
-            label = QLabel(text = item, parent = self)
-            label.setStyleSheet("font: bold 14px;")
-            layout.addWidget(label, row, 0)
-            
-            spinbox = QSpinBox(self)
-            layout.addWidget(spinbox, row+1, 0)
-
-            slider = QSlider(Qt.Orientation.Horizontal, self)
-            layout.addWidget(slider, row+1, 1, 1, 9)
-
-            image = QLabel("", self)
-            image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            set_image_to_label(underwatch.detectables[item]["Template"], image)
-            layout.addWidget(image, row, 10, 2, 1)
-
-            row += 2
 
 class Worker(QThread):
     def __init__(self, funtion):
