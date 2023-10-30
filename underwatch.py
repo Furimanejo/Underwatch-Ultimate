@@ -50,58 +50,80 @@ class GUI(QMainWindow):
 class UnderwatchTab(QWidget):
     def __init__(self, parent, computer_vision, overlay) -> None:
         super(UnderwatchTab, self).__init__(parent)
-        #self.setStyleSheet("border: 0px solid red;")
-        
-        outer_layout = QGridLayout()
-        scroll_area = QScrollArea(self)
-        scroll_widget = QWidget(self)
-        inner_layout = QVBoxLayout(self)
+        inner_layout = QGridLayout(self)
         inner_layout.setAlignment(Qt.AlignTop)
 
-        outer_layout.setContentsMargins(0,0,0,0)
+        scroll_widget = QWidget(self)
+        scroll_widget.setLayout(inner_layout)
+
+        scroll_area = QScrollArea(self)
         scroll_area.setBackgroundRole(QPalette.Base)
         scroll_area.setFrameShape(QFrame.NoFrame)
-
-        scroll_widget.setLayout(inner_layout)
         scroll_area.setWidget(scroll_widget)
         scroll_area.setWidgetResizable(True)
+        
+        outer_layout = QGridLayout()
+        outer_layout.setContentsMargins(0,0,0,0)
         outer_layout.addWidget(scroll_area)
         self.setLayout(outer_layout)
 
-        overlay_layout = QGridLayout()
-        overlay_group = QGroupBox("Overlay")
-        overlay_group.setLayout(overlay_layout)
-        inner_layout.addWidget(overlay_group)
         row = 0
 
-        # Overlay settings
         show_overlay_mode_label = QLabel("Show Overlay:", self)
-        overlay_layout.addWidget(show_overlay_mode_label, row,0)
+        inner_layout.addWidget(show_overlay_mode_label, row,0)
         show_overlay_mode = QComboBox(self)
-        overlay_layout.addWidget(show_overlay_mode, row, 1)
+        inner_layout.addWidget(show_overlay_mode, row, 1)
         show_overlay_mode.addItem("Never")
         show_overlay_mode.addItem("Always")
         show_overlay_mode.addItem("When Overwatch Is Focused")
         show_overlay_mode.currentIndexChanged.connect(overlay.update_show_overlay_mode)
-        show_overlay_mode.setCurrentIndex(2)
+        show_overlay_mode.setCurrentIndex(overlay.show_overlay_mode)
         row += 1
 
         show_detection_regions_label = QLabel("Debug Detection Regions:", self)
-        overlay_layout.addWidget(show_detection_regions_label, row,0)
+        inner_layout.addWidget(show_detection_regions_label, row,0)
         show_detection_regions_mode = QComboBox(self)
-        overlay_layout.addWidget(show_detection_regions_mode, row, 1)
+        inner_layout.addWidget(show_detection_regions_mode, row, 1)
         show_detection_regions_mode.addItem("Never")
         show_detection_regions_mode.addItem("Always")
         show_detection_regions_mode.addItem("When Detection Occurs")
         show_detection_regions_mode.currentIndexChanged.connect(overlay.update_show_regions_mode)
-        show_detection_regions_mode.setCurrentIndex(2)
+        show_detection_regions_mode.setCurrentIndex(overlay.show_regions_mode)
         row += 1
+
+        killcam_label = QLabel("Skip Killcam and POTG", self)
+        killcam_box = QCheckBox(self)
+        killcam_box.setChecked(computer_vision.ignore_spectate)
+        killcam_box.stateChanged.connect(computer_vision.set_ignore_spectate)
+        inner_layout.addWidget(killcam_label, row, 0)
+        inner_layout.addWidget(killcam_box, row, 1)
+        row += 1
+
+        ignore_redundant_label = QLabel("Ignore Redundant Assits", self)
+        ignore_redundant_box = QCheckBox(self)
+        ignore_redundant_box.setChecked(computer_vision.ignore_redundant_assists)
+        ignore_redundant_box.stateChanged.connect(computer_vision.set_ignore_redundant_assists)
+        inner_layout.addWidget(ignore_redundant_label, row, 0)
+        inner_layout.addWidget(ignore_redundant_box, row, 1)
+        row += 1
+
+        decay_label = QLabel("Score Decay Per Minute", self)
+        decay_input_box = QSpinBox(self)
+        decay_input_box.setMaximum(999)
+        decay_input_box.valueChanged.connect(computer_vision.set_decay)
+        decay_input_box.setValue(computer_vision.decay_per_minute)
+        inner_layout.addWidget(decay_label, row, 0)
+        inner_layout.addWidget(decay_input_box, row, 1)
+        row += 1
+
+        for i in range(inner_layout.rowCount()):
+            inner_layout.setRowMinimumHeight(i, 30)
 
         # Detectables
         detectables_layout = QGridLayout()
         detectables_group = QGroupBox("Detectables")
         detectables_group.setLayout(detectables_layout)
-        inner_layout.addWidget(detectables_group)
+        inner_layout.addWidget(detectables_group, row, 0, 1, 2)
         for item in computer_vision.detectables.items():
             if (item[0] == "KillcamOrPOTG"):
                 continue
@@ -136,10 +158,12 @@ class UnderwatchTab(QWidget):
 
             combo_box = QComboBox(self)
             combo_box.setMinimumHeight(mininum_height)
-            combo_box.setMinimumWidth(180)
+            combo_box.setMinimumWidth(200)
+            combo_box.addItem("Momentary Points")
             combo_box.addItem("Points Per Second")
-            combo_box.addItem("Points (Instant)")
-            combo_box.setCurrentIndex(detectable[1]["PointsType"])
+            if (detectable[1]["Duration"] != 1):
+                combo_box.addItem("Points Over Duration")
+            combo_box.setCurrentIndex(detectable[1]["Type"])
             combo_box.currentIndexChanged.connect(self.update_points_type)
 
             layout.addWidget(image, 0, 0)
@@ -153,7 +177,7 @@ class UnderwatchTab(QWidget):
             self.detectable[1]["Points"] = value;
 
         def update_points_type(self, value):
-            self.detectable[1]["PointsType"] = value;
+            self.detectable[1]["Type"] = value;
 
 class Worker(QThread):
     def __init__(self, funtion):

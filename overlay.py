@@ -5,12 +5,12 @@ from win32gui import GetWindowText, GetForegroundWindow
 class Overlay(QWidget):
     def __init__(self, underwatch) -> None:
         super(Overlay, self).__init__(parent = None)
-        self.underwatch = underwatch
-        self.show_overlay_mode = 0
-        self.show_regions_mode = 0
+        self.computer_vision = underwatch
+        self.show_overlay_mode = 2
+        self.show_regions_mode = 2
 
         self.setWindowTitle("overlay")
-        self.resize(self.underwatch.monitor["width"], self.underwatch.monitor["height"])
+        self.resize(self.computer_vision.monitor["width"], self.computer_vision.monitor["height"])
 
         flags = 0
         flags |= Qt.WindowType.WindowTransparentForInput 
@@ -23,15 +23,15 @@ class Overlay(QWidget):
         # Corners
         self.label = QLabel("", self)
         self.label.setStyleSheet("border: 1px solid magenta;")
-        self.label.setGeometry(0,0, self.underwatch.monitor["width"], self.underwatch.monitor["height"])
+        self.label.setGeometry(0,0, self.computer_vision.monitor["width"], self.computer_vision.monitor["height"])
 
         self.points_label = QLabel("UWU Points:", self)
         self.points_label.setStyleSheet("color: magenta; font: bold 18px;")
-        self.points_label.setGeometry(175 , self.underwatch.monitor["height"] - 80,  200, 20)
+        self.points_label.setGeometry(175 , self.computer_vision.monitor["height"] - 80,  200, 20)
 
         self.detection_delay_label = QLabel("Detection Delay:", self)
         self.detection_delay_label.setStyleSheet("color: magenta; font: bold 12px;")
-        self.detection_delay_label.setGeometry(175 , self.underwatch.monitor["height"] - 60,  200, 20)
+        self.detection_delay_label.setGeometry(175 , self.computer_vision.monitor["height"] - 60,  200, 20)
 
         self.regions = {}
 
@@ -50,9 +50,13 @@ class Overlay(QWidget):
                 label.setGeometry(left - 200, top, 195, bottom-top)
                 label.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
             else:
-                label.setGeometry(left, top-20, 200, 20)
+                label.setGeometry(left, top-100, 200, 100)
+                label.setAlignment(Qt.AlignLeft | Qt.AlignBottom)
 
             self.regions[region] = {"Rect": rect, "Label": label}
+
+        self.update_show_overlay_mode(self.show_overlay_mode)
+        self.update_show_regions_mode(self.show_regions_mode)
         
     def update(self):
         if (self.show_overlay_mode == 2):
@@ -64,8 +68,8 @@ class Overlay(QWidget):
         if (self.show_regions_mode == 2):
             self.update_show_regions_mode(self.show_regions_mode)
 
-        self.points_label.setText("UWU Points: {0:.0f}".format(self.underwatch.score))
-        self.detection_delay_label.setText("Detection Delay: {0:4.0f}ms".format(1000 * self.underwatch.detection_delay))
+        self.points_label.setText("Score: {0:.0f}".format(self.computer_vision.get_current_score()))
+        self.detection_delay_label.setText("Detection Delay: {0:4.0f}ms".format(1000 * self.computer_vision.detection_ping))
 
     def update_show_overlay_mode(self, new_mode_index):
         self.show_overlay_mode = new_mode_index
@@ -98,11 +102,19 @@ class Overlay(QWidget):
 
         elif (self.show_regions_mode == 2):
             for region in self.regions:
-                match = self.underwatch.regions[region]["Match"]
-                if (match is None):
+                matches = self.computer_vision.regions[region]["Matches"]
+                if (matches == []):
                     self.regions[region]["Rect"].hide()
                     self.regions[region]["Label"].hide()
                 else:
-                    self.regions[region]["Rect"].show()
-                    self.regions[region]["Label"].setText(match)
+                    text = ""
+                    count = 0
+                    for m in matches:
+                        count += 1
+                        if (count > 1):
+                            text += "\n"
+                        text += m
+
+                    self.regions[region]["Label"].setText(text)
                     self.regions[region]["Label"].show()
+                    self.regions[region]["Rect"].show()
