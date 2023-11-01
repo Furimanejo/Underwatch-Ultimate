@@ -3,9 +3,9 @@ from PyQt5.QtCore import Qt
 from win32gui import GetWindowText, GetForegroundWindow
 
 class Overlay(QWidget):
-    def __init__(self, underwatch) -> None:
+    def __init__(self, computer_vision) -> None:
         super(Overlay, self).__init__(parent = None)
-        self.computer_vision = underwatch
+        self.computer_vision = computer_vision
         self.show_overlay_mode = 2
         self.show_regions_mode = 2
         
@@ -25,19 +25,23 @@ class Overlay(QWidget):
 
         self.points_label = QLabel("Score:", self)
         self.points_label.setStyleSheet("color: rgb(200, 0, 200); font: bold 18px;")
-        self.points_label.setGeometry(175 , self.computer_vision.monitor["height"] - 80,  200, 20)
+        rect = [1000, 1020, 170, 420]
+        computer_vision.scale_to_monitor(rect)
+        self.points_label.setGeometry(rect[2], rect[0], rect[3]-rect[2], rect[1]-rect[0])
 
         self.detection_delay_label = QLabel("Detection Delay:", self)
         self.detection_delay_label.setStyleSheet("color: rgb(200, 0, 200); font: bold 12px;")
-        self.detection_delay_label.setGeometry(175 , self.computer_vision.monitor["height"] - 60,  200, 20)
+        rect = [1020, 1040, 170, 420]
+        computer_vision.scale_to_monitor(rect)
+        self.detection_delay_label.setGeometry(rect[2], rect[0], rect[3]-rect[2], rect[1]-rect[0])
 
         self.regions = {}
-        for region in underwatch.regions:
+        for region in computer_vision.regions:
             rect = QLabel("", self)
-            top = underwatch.regions[region]["Rect"][0]
-            bottom = underwatch.regions[region]["Rect"][1]
-            left = underwatch.regions[region]["Rect"][2]
-            right = underwatch.regions[region]["Rect"][3]
+            top = computer_vision.regions[region]["Rect"][0]
+            bottom = computer_vision.regions[region]["Rect"][1]
+            left = computer_vision.regions[region]["Rect"][2]
+            right = computer_vision.regions[region]["Rect"][3]
             rect.setGeometry(left, top, right-left, bottom-top)
             rect.setStyleSheet("color: red; border: 1px solid red;")
 
