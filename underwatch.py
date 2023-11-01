@@ -1,9 +1,9 @@
 import sys
 import asyncio
-from tkinter import SCROLL, Grid
+
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import QImage, QPixmap, QFont, QPalette
+from PyQt5.QtGui import *
 
 from computer_vision import ComputerVision
 from overlay import Overlay
@@ -12,7 +12,7 @@ from device_control import DeviceControlWidget
 class GUI(QMainWindow):
     def __init__(self) -> None:
         super(GUI, self).__init__()
-        self.setWindowTitle("Underwatch")
+        self.setWindowTitle("Underwatch Ultimate")
         self.resize(800, 600)
         qApp.setStyleSheet("QWidget{font-size:18px;}")
 
@@ -20,6 +20,10 @@ class GUI(QMainWindow):
         self.setCentralWidget(centralWidget)
         self.layout = QGridLayout()
         centralWidget.setLayout(self.layout)
+
+        self.debug_cv_time = 0
+        self.debug_overlay_time = 0
+        self.debug_device_control_time = 0
 
         self.computer_vision = ComputerVision()
         self.overlay = Overlay(self.computer_vision)
@@ -37,19 +41,27 @@ class GUI(QMainWindow):
         self.underwatch_tab = UnderwatchTab(self, self.computer_vision, self.overlay)
         self.tabs.addTab(self.underwatch_tab, "Settings")
 
-        self.device_control = DeviceControlWidget(self, "Underwatch")
+        self.device_control = DeviceControlWidget(self, "Underwatch Ultimate")
         self.tabs.addTab(self.device_control, "Device Control")
 
     async def background_thread_loop(self):
         while True:
-            await self.computer_vision.update()
-            await self.device_control.update(0)
-            self.overlay.update()
-            await asyncio.sleep(0.01)
+            await self.update()
+
+    async def update(self):
+        QApplication.processEvents()
+        QGuiApplication.processEvents()
+        QCoreApplication.processEvents()
+        await asyncio.sleep(5/1000)
+        self.computer_vision.update()
+        self.underwatch_tab.update()
+        self.overlay.update()
+        await self.device_control.update(self.computer_vision.get_current_score())
 
 class UnderwatchTab(QWidget):
     def __init__(self, parent, computer_vision, overlay) -> None:
         super(UnderwatchTab, self).__init__(parent)
+        self.computer_vision = computer_vision
         inner_layout = QGridLayout(self)
         inner_layout.setAlignment(Qt.AlignTop)
 
@@ -107,6 +119,15 @@ class UnderwatchTab(QWidget):
         inner_layout.addWidget(ignore_redundant_box, row, 1)
         row += 1
 
+        score_label = QLabel("Current Score", self)
+        self.score_input_box = QSpinBox(self)
+        self.score_input_box.setMaximum(999)
+        self.score_input_box.valueChanged.connect(computer_vision.set_score)
+        self.score_input_box.setValue(computer_vision.score_over_time)
+        inner_layout.addWidget(score_label, row, 0)
+        inner_layout.addWidget(self.score_input_box, row, 1)
+        row += 1
+        
         decay_label = QLabel("Score Decay Per Minute", self)
         decay_input_box = QSpinBox(self)
         decay_input_box.setMaximum(999)
@@ -178,6 +199,12 @@ class UnderwatchTab(QWidget):
 
         def update_points_type(self, value):
             self.detectable[1]["Type"] = value;
+
+    def update(self):
+        if (self.score_input_box.hasFocus() == False):
+            self.score_input_box.blockSignals(True)
+            self.score_input_box.setValue(int(self.computer_vision.score_over_time))
+            self.score_input_box.blockSignals(False)
 
 class Worker(QThread):
     def __init__(self, funtion):

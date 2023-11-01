@@ -8,10 +8,9 @@ class Overlay(QWidget):
         self.computer_vision = underwatch
         self.show_overlay_mode = 2
         self.show_regions_mode = 2
-
+        
         self.setWindowTitle("overlay")
         self.resize(self.computer_vision.monitor["width"], self.computer_vision.monitor["height"])
-
         flags = 0
         flags |= Qt.WindowType.WindowTransparentForInput 
         flags |= Qt.WindowStaysOnTopHint  
@@ -20,21 +19,19 @@ class Overlay(QWidget):
         self.setWindowFlags(flags)
         self.setAttribute(Qt.WA_TranslucentBackground)
 
-        # Corners
-        self.label = QLabel("", self)
-        self.label.setStyleSheet("border: 1px solid magenta;")
-        self.label.setGeometry(0,0, self.computer_vision.monitor["width"], self.computer_vision.monitor["height"])
+        self.corners = QLabel("", self)
+        self.corners.setStyleSheet("border: 1px solid magenta;")
+        self.corners.setGeometry(0,0, self.computer_vision.monitor["width"], self.computer_vision.monitor["height"])
 
-        self.points_label = QLabel("UWU Points:", self)
-        self.points_label.setStyleSheet("color: magenta; font: bold 18px;")
+        self.points_label = QLabel("Score:", self)
+        self.points_label.setStyleSheet("color: rgb(200, 0, 200); font: bold 18px;")
         self.points_label.setGeometry(175 , self.computer_vision.monitor["height"] - 80,  200, 20)
 
         self.detection_delay_label = QLabel("Detection Delay:", self)
-        self.detection_delay_label.setStyleSheet("color: magenta; font: bold 12px;")
+        self.detection_delay_label.setStyleSheet("color: rgb(200, 0, 200); font: bold 12px;")
         self.detection_delay_label.setGeometry(175 , self.computer_vision.monitor["height"] - 60,  200, 20)
 
         self.regions = {}
-
         for region in underwatch.regions:
             rect = QLabel("", self)
             top = underwatch.regions[region]["Rect"][0]
@@ -55,50 +52,57 @@ class Overlay(QWidget):
 
             self.regions[region] = {"Rect": rect, "Label": label}
 
-        self.update_show_overlay_mode(self.show_overlay_mode)
-        self.update_show_regions_mode(self.show_regions_mode)
+        self.update()
         
     def update(self):
-        if (self.show_overlay_mode == 2):
-            self.update_show_overlay_mode(self.show_overlay_mode)
-
-        if (self.isVisible == False):
-            return
-
-        if (self.show_regions_mode == 2):
-            self.update_show_regions_mode(self.show_regions_mode)
-
-        self.points_label.setText("Score: {0:.0f}".format(self.computer_vision.get_current_score()))
-        self.detection_delay_label.setText("Detection Delay: {0:4.0f}ms".format(1000 * self.computer_vision.detection_ping))
-
-    def update_show_overlay_mode(self, new_mode_index):
-        self.show_overlay_mode = new_mode_index
-
+        show = False
         if (self.show_overlay_mode == 0):
-            self.hide()
-        
-        elif (self.show_overlay_mode == 1):
-            self.show()
+            show = False
 
-        elif (self.show_overlay_mode == 2):
+        elif (self.show_overlay_mode == 1):
+            show = True
+            self.set_active(True)
+
+        elif (self.show_regions_mode == 2):
             activeWindow = GetWindowText(GetForegroundWindow())
             if (activeWindow == "Overwatch"):
-                self.show()
+                show = True
             else:
-                self.hide()
+                show = False
 
-    def update_show_regions_mode(self, new_mode_index):
-        self.show_regions_mode = new_mode_index
-        if (self.show_regions_mode == 0):
+        self.set_active(show)
+        if (show):
+            self.update_regions()
+
+        self.points_label.setText("Score: {0:.0f}".format(self.computer_vision.get_current_score()))
+        self.detection_delay_label.setText("Detection Delay: {0:4.0f} MS".format(1000 * self.computer_vision.detection_ping))
+
+    def set_active(self, value):
+        if (value is False):
+            self.corners.hide()
+            self.points_label.hide()
+            self.detection_delay_label.hide()
             for region in self.regions:
                 self.regions[region]["Rect"].hide()
                 self.regions[region]["Label"].hide()
+                self.regions[region]["Label"].setText("")
+        else:
+            self.corners.show()
+            self.points_label.show()
+            self.detection_delay_label.show()
+
+    def update_regions(self):
+        if (self.show_regions_mode == 0 or self.show_overlay_mode == 0):
+            for region in self.regions:
+                self.regions[region]["Rect"].hide()
+                self.regions[region]["Label"].hide()
+                self.regions[region]["Label"].setText("")
 
         elif (self.show_regions_mode == 1):
             for region in self.regions:
                 self.regions[region]["Rect"].show()
-                self.regions[region]["Label"].setText(region)
                 self.regions[region]["Label"].show()
+                self.regions[region]["Label"].setText(region)
 
         elif (self.show_regions_mode == 2):
             for region in self.regions:
@@ -118,3 +122,9 @@ class Overlay(QWidget):
                     self.regions[region]["Label"].setText(text)
                     self.regions[region]["Label"].show()
                     self.regions[region]["Rect"].show()
+
+    def update_show_overlay_mode(self, new_mode_index):
+        self.show_overlay_mode = new_mode_index
+
+    def update_show_regions_mode(self, new_mode_index):
+        self.show_regions_mode = new_mode_index

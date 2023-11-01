@@ -1,10 +1,9 @@
-from ast import Str
-from http import client
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import * 
 from PyQt5.QtGui import QPalette
 import time
-import buttplug
+
+import buttplug 
 
 class DeviceControlWidget(QWidget):
     # custom signals have to be defined outside __init__ for some reason
