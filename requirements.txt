@@ -1,0 +1,7 @@
+buttplug_py==0.2.0
+mss==9.0.1
+numpy==1.24.2
+opencv_python==4.7.0.68
+PyQt5==5.15.10
+PyQt5_sip==12.13.0
+pywin32==306
