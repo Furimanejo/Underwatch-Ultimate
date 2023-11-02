@@ -65,7 +65,6 @@ class Overlay(QWidget):
 
         elif (self.show_overlay_mode == 1):
             show = True
-            self.set_active(True)
 
         elif (self.show_regions_mode == 2):
             activeWindow = GetWindowText(GetForegroundWindow())
@@ -88,7 +87,6 @@ class Overlay(QWidget):
             self.detection_delay_label.hide()
             for region in self.regions:
                 self.regions[region]["Rect"].hide()
-                self.regions[region]["Label"].hide()
                 self.regions[region]["Label"].setText("")
         else:
             self.corners.show()
@@ -114,6 +112,7 @@ class Overlay(QWidget):
                 if (matches == []):
                     self.regions[region]["Rect"].hide()
                     self.regions[region]["Label"].hide()
+                    self.regions[region]["Label"].setText("")
                 else:
                     text = ""
                     count = 0

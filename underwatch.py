@@ -172,9 +172,9 @@ class UnderwatchTab(QWidget):
 
             spin_box = QSpinBox(self)
             spin_box.setMinimumHeight(mininum_height)
-            spin_box.setValue(detectable[1]["Points"])
             spin_box.setMaximum(999)
             spin_box.setMinimum(-999)
+            spin_box.setValue(detectable[1]["Points"])
             spin_box.valueChanged.connect(self.update_points)
 
             combo_box = QComboBox(self)

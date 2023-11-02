@@ -37,6 +37,7 @@ class ComputerVision():
         self.regions["Give Mercy Heal"] = {"Rect": [655, 723, 790, 858], "MaxMatches": 1}
         self.regions["Give Mercy Boost"] = {"Rect": [655, 723, 1062, 1130], "MaxMatches": 1}
         self.regions["Receive Heal"] = {"Rect": [740, 840, 440, 650], "MaxMatches": 2}
+        self.regions["Receive Status Effect"] = {"Rect": [840, 895, 160, 300], "MaxMatches": 3}
 
         for region in self.regions:
             self.scale_to_monitor(self.regions[region]["Rect"])
@@ -44,17 +45,27 @@ class ComputerVision():
 
         self.detectables = {}
         self.detectables["KillcamOrPOTG"] = {"Filename": "killcam_potg_sobel.png", "Threshold": .75}
+
         self.detectables["Elimination"] = {"Filename": "elimination.png", "Threshold": .8, "Points": 25, "Type": 2, "Duration": 2.5}
         self.detectables["Assist"] = {"Filename": "assist.png", "Threshold": .8, "Points": 20, "Type": 2, "Duration": 2.5}
         self.detectables["Saved"] = {"Filename": "saved.png", "Threshold": .8, "Points": 30 ,"Type": 2, "Duration": 2.5}
         self.detectables["Eliminated"] = {"Filename": "you_were_eliminated.png", "Threshold": .8, "Points": 0 ,"Type": 2, "Duration": 2.5}
+
         self.detectables["Give Harmony Orb"] = {"Filename": "apply_harmony.png", "Threshold": .9, "Points": 10, "Type": 0, "Duration": 1}
         self.detectables["Give Discord Orb"] = {"Filename": "apply_discord.png", "Threshold": .9, "Points": 20, "Type": 0, "Duration": 1}
+
         self.detectables["Give Mercy Heal"] = {"Filename": "apply_mercy_heal.png", "Threshold": .7, "Points": 10, "Type": 0, "Duration": 1}
         self.detectables["Give Mercy Boost"] = {"Filename": "apply_mercy_boost.png", "Threshold": .7, "Points": 20, "Type": 0, "Duration": 1}
+
         self.detectables["Receive Zen Heal"] = {"Filename": "receive_zen_heal.png", "Threshold": .8, "Points": 10, "Type": 0, "Duration": 1}
         self.detectables["Receive Mercy Heal"] = {"Filename": "receive_mercy_heal.png", "Threshold": .8, "Points": 15, "Type": 0, "Duration": 1}
         self.detectables["Receive Mercy Boost"] = {"Filename": "receive_mercy_boost.png", "Threshold": .8, "Points": 25, "Type": 0, "Duration": 1}
+
+        self.detectables["Receive Hack"] = {"Filename": "receive_hack_icon.png", "Threshold": .8, "Points": 100, "Type": 0, "Duration": 1}
+        self.detectables["Receive Discord Orb"] = {"Filename": "receive_discord.png", "Threshold": .8, "Points": -20, "Type": 1, "Duration": 1}
+        self.detectables["Receive Anti-Heal"] = {"Filename": "receive_purple_pot.png", "Threshold": .8, "Points": -50, "Type": 0, "Duration": 1}
+        self.detectables["Receive Heal Boost"] = {"Filename": "receive_yellow_pot.png", "Threshold": .8, "Points": 20, "Type": 0, "Duration": 1}
+        self.detectables["Receive Immortality"] = {"Filename": "receive_immortality.png", "Threshold": .8, "Points": 20, "Type": 0, "Duration": 1}
 
         for item in self.detectables:
             self.detectables[item]["Template"] = self.load_and_scale_template(self.detectables[item]["Filename"])
@@ -88,7 +99,6 @@ class ComputerVision():
 
         on_killcam = False
         if (self.ignore_spectate):
-            self.grab_frame_cropped_to_regions(["KillcamOrPOTG"])
             on_killcam = self.update_killcam_or_potg()
         
         if (on_killcam == False):
@@ -120,6 +130,7 @@ class ComputerVision():
         self.detection_ping = (1-a) * self.detection_ping + a * (t1-t0)
 
     def update_killcam_or_potg(self):
+        self.grab_frame_cropped_to_regions(["KillcamOrPOTG"])
         self.match_detectables_on_region("KillcamOrPOTG", ["KillcamOrPOTG"], operation = self.sobel_operation)
         return self.detectables["KillcamOrPOTG"]["Count"] > 0
 
@@ -133,10 +144,14 @@ class ComputerVision():
             self.match_detectables_on_region(region, ["Eliminated"])
 
     def update_other_detections(self):
-        self.match_detectables_on_region("Receive Heal", ["Receive Zen Heal", "Receive Mercy Boost", "Receive Mercy Heal"])
-
         for item in ["Give Harmony Orb", "Give Discord Orb", "Give Mercy Boost", "Give Mercy Heal"]:
             self.match_detectables_on_region(item, [item])
+        
+        healDetectables = ["Receive Zen Heal", "Receive Mercy Boost", "Receive Mercy Heal"]
+        self.match_detectables_on_region("Receive Heal", healDetectables)
+
+        statusDetectables = ["Receive Hack", "Receive Discord Orb", "Receive Anti-Heal", "Receive Heal Boost", "Receive Immortality"]
+        self.match_detectables_on_region("Receive Status Effect", statusDetectables)
 
     def get_current_score(self):
         return self.score_over_time + self.score_instant
