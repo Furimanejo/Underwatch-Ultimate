@@ -1,4 +1,4 @@
-An application to controls sex toys based on Overwatch 2 gameplay.
+An application to controls sex toys based on Overwatch 2 gameplay. Here's a [list](https://iostindex.com/?filter0ButtplugSupport=4) of supported devices.
 
 # Instructions:
 - Install and run [Intiface Central](https://intiface.com/central/).
