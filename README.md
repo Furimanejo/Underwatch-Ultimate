@@ -13,4 +13,5 @@ An application to controls sex toys based on Overwatch 2 gameplay. Here's a [lis
 # Support:
 
 Join my [discord server](https://discord.gg/wz2qvkuEyJ) if you have any questions, suggestions or just wanna talk about it.
+
 And if you liked the app and want to support me, you can donate at https://donate.stripe.com/7sI3eZcExdGrc5WeUU
