@@ -8,10 +8,13 @@ from PyQt5.QtGui import *
 from computer_vision import ComputerVision
 from overlay import Overlay
 from device_control import DeviceControlWidget
+from config_handler import config, save_to_file, load_from_file
 
 class GUI(QMainWindow):
     def __init__(self) -> None:
         super(GUI, self).__init__()
+        load_from_file()
+
         self.setWindowTitle("Underwatch Ultimate")
         self.resize(800, 600)
         qApp.setStyleSheet("QWidget{font-size:18px;}")
@@ -20,10 +23,6 @@ class GUI(QMainWindow):
         self.setCentralWidget(centralWidget)
         self.layout = QGridLayout()
         centralWidget.setLayout(self.layout)
-
-        self.debug_cv_time = 0
-        self.debug_overlay_time = 0
-        self.debug_device_control_time = 0
 
         self.computer_vision = ComputerVision()
         self.overlay = Overlay(self.computer_vision)
@@ -88,8 +87,8 @@ class UnderwatchTab(QWidget):
         show_overlay_mode.addItem("Never")
         show_overlay_mode.addItem("Always")
         show_overlay_mode.addItem("When Overwatch Is Focused")
-        show_overlay_mode.currentIndexChanged.connect(overlay.update_show_overlay_mode)
-        show_overlay_mode.setCurrentIndex(overlay.show_overlay_mode)
+        show_overlay_mode.currentIndexChanged.connect(lambda value: set_config("show_overlay_mode", value))
+        show_overlay_mode.setCurrentIndex(config["show_overlay_mode"])
         row += 1
 
         show_detection_regions_label = QLabel("Debug Detection Regions:", self)
@@ -99,22 +98,22 @@ class UnderwatchTab(QWidget):
         show_detection_regions_mode.addItem("Never")
         show_detection_regions_mode.addItem("Always")
         show_detection_regions_mode.addItem("When Detection Occurs")
-        show_detection_regions_mode.currentIndexChanged.connect(overlay.update_show_regions_mode)
-        show_detection_regions_mode.setCurrentIndex(overlay.show_regions_mode)
+        show_detection_regions_mode.currentIndexChanged.connect(lambda value: set_config("show_regions_mode", value))
+        show_detection_regions_mode.setCurrentIndex(config["show_regions_mode"])
         row += 1
 
         killcam_label = QLabel("Skip Killcam and POTG", self)
         killcam_box = QCheckBox(self)
-        killcam_box.setChecked(computer_vision.ignore_spectate)
-        killcam_box.stateChanged.connect(computer_vision.set_ignore_spectate)
+        killcam_box.setChecked(config["ignore_spectate"])
+        killcam_box.stateChanged.connect(lambda value = False : set_config("ignore_spectate", value != 0))
         inner_layout.addWidget(killcam_label, row, 0)
         inner_layout.addWidget(killcam_box, row, 1)
         row += 1
 
         ignore_redundant_label = QLabel("Ignore Redundant Assits", self)
         ignore_redundant_box = QCheckBox(self)
-        ignore_redundant_box.setChecked(computer_vision.ignore_redundant_assists)
-        ignore_redundant_box.stateChanged.connect(computer_vision.set_ignore_redundant_assists)
+        ignore_redundant_box.setChecked(config["ignore_redundant_assists"])
+        ignore_redundant_box.stateChanged.connect(lambda value : set_config("ignore_redundant_assists", value != 0))
         inner_layout.addWidget(ignore_redundant_label, row, 0)
         inner_layout.addWidget(ignore_redundant_box, row, 1)
         row += 1
@@ -131,8 +130,8 @@ class UnderwatchTab(QWidget):
         decay_label = QLabel("Score Decay Per Minute", self)
         decay_input_box = QSpinBox(self)
         decay_input_box.setMaximum(999)
-        decay_input_box.valueChanged.connect(computer_vision.set_decay)
-        decay_input_box.setValue(computer_vision.decay_per_minute)
+        decay_input_box.setValue(config["decay"])
+        decay_input_box.valueChanged.connect(lambda value : set_config("decay", value))
         inner_layout.addWidget(decay_label, row, 0)
         inner_layout.addWidget(decay_input_box, row, 1)
         row += 1
@@ -145,7 +144,7 @@ class UnderwatchTab(QWidget):
         detectables_group = QGroupBox("Detectables")
         detectables_group.setLayout(detectables_layout)
         inner_layout.addWidget(detectables_group, row, 0, 1, 2)
-        for item in computer_vision.detectables.items():
+        for item in config["detectables"].items():
             if (item[0] == "KillcamOrPOTG"):
                 continue
             detectable = UnderwatchTab.DetectableWidget(self, item)
@@ -196,9 +195,11 @@ class UnderwatchTab(QWidget):
 
         def update_points(self, value):
             self.detectable[1]["Points"] = value;
+            save_to_file()
 
         def update_points_type(self, value):
             self.detectable[1]["Type"] = value;
+            save_to_file()
 
     def update(self):
         if (self.score_input_box.hasFocus() == False):
@@ -213,6 +214,10 @@ class Worker(QThread):
 
     def run(self):
         asyncio.run(self.function())
+
+def set_config(key, value):
+    config[key] = value
+    save_to_file()
 
 def set_image_to_label(image, label):
     #h, w, ch = 0
