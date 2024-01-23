@@ -1,5 +1,7 @@
 import sys
+import os
 import asyncio
+from time import sleep
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
@@ -8,12 +10,15 @@ from PyQt5.QtGui import *
 from computer_vision import ComputerVision
 from overlay import Overlay
 from device_control import DeviceControlWidget
-from config_handler import config, save_to_file, load_from_file
+from config_handler import config, save_to_file, load_from_file, aspect_ratios
 
 class GUI(QMainWindow):
+    update_signal = pyqtSignal()
+
     def __init__(self) -> None:
         super(GUI, self).__init__()
         load_from_file()
+        save_to_file()
 
         self.setWindowTitle("Underwatch Ultimate")
         self.resize(800, 600)
@@ -26,9 +31,10 @@ class GUI(QMainWindow):
 
         self.computer_vision = ComputerVision()
         self.overlay = Overlay(self.computer_vision)
-        self.overlay.show()
         self.setup_tabs();
         self.show()
+
+        self.update_signal.connect(self.update_graphics)
 
         self.backgroud_thread = Worker(self.background_thread_loop)
         self.backgroud_thread.start()
@@ -37,29 +43,39 @@ class GUI(QMainWindow):
         self.tabs = QTabWidget(self)
         self.layout.addWidget(self.tabs, 0, 0)
 
-        self.underwatch_tab = UnderwatchTab(self, self.computer_vision, self.overlay)
+        self.underwatch_tab = SettingsTab(self, self.computer_vision, self.overlay)
         self.tabs.addTab(self.underwatch_tab, "Settings")
 
         self.device_control = DeviceControlWidget(self, "Underwatch Ultimate")
         self.tabs.addTab(self.device_control, "Device Control")
 
+        self.about_tab = AboutTab(self)
+        self.tabs.addTab(self.about_tab, "About")
+
+    def closeEvent(self, event):
+        self.backgroud_thread.terminate()
+        event.accept()
+
     async def background_thread_loop(self):
         while True:
-            await self.update()
+            cv_updated = self.computer_vision.update()
+            if cv_updated:
+                await self.device_control.update(self.computer_vision.get_current_score())
+                self.update_signal.emit()
+            await asyncio.sleep(1/1000)
 
-    async def update(self):
-        QApplication.processEvents()
-        QGuiApplication.processEvents()
-        QCoreApplication.processEvents()
-        await asyncio.sleep(5/1000)
-        self.computer_vision.update()
+    def update_graphics(self):
+        if self.computer_vision.resolution_changed:
+            self.overlay.close()
+            self.overlay = Overlay(self.computer_vision)
+            self.computer_vision.resolution_changed = False
+
         self.underwatch_tab.update()
         self.overlay.update()
-        await self.device_control.update(self.computer_vision.get_current_score())
 
-class UnderwatchTab(QWidget):
+class SettingsTab(QWidget):
     def __init__(self, parent, computer_vision, overlay) -> None:
-        super(UnderwatchTab, self).__init__(parent)
+        super(SettingsTab, self).__init__(parent)
         self.computer_vision = computer_vision
         inner_layout = QGridLayout(self)
         inner_layout.setAlignment(Qt.AlignTop)
@@ -79,6 +95,16 @@ class UnderwatchTab(QWidget):
         self.setLayout(outer_layout)
 
         row = 0
+        
+        aspect_ratio_label = QLabel("Aspect Ratio:", self)
+        inner_layout.addWidget(aspect_ratio_label, row, 0)
+        aspect_ratio_combo_box = QComboBox(self)
+        inner_layout.addWidget(aspect_ratio_combo_box, row, 1)
+        for aspect_ratio in aspect_ratios:
+            aspect_ratio_combo_box.addItem(aspect_ratios[aspect_ratio]["id"])
+        aspect_ratio_combo_box.currentIndexChanged.connect(lambda value: set_config("aspect_ratio_index", value))
+        aspect_ratio_combo_box.setCurrentIndex(config["aspect_ratio_index"])
+        row += 1
 
         show_overlay_mode_label = QLabel("Show Overlay:", self)
         inner_layout.addWidget(show_overlay_mode_label, row,0)
@@ -145,14 +171,14 @@ class UnderwatchTab(QWidget):
         detectables_group.setLayout(detectables_layout)
         inner_layout.addWidget(detectables_group, row, 0, 1, 2)
         for item in config["detectables"].items():
-            if (item[0] == "KillcamOrPOTG"):
+            if item[0] == "KillcamOrPOTG":
                 continue
-            detectable = UnderwatchTab.DetectableWidget(self, item)
+            detectable = SettingsTab.DetectableWidget(self, item)
             detectables_layout.addWidget(detectable)
 
     class DetectableWidget(QWidget):
         def __init__(self, parent, detectable) -> None:
-            super(UnderwatchTab.DetectableWidget, self).__init__(parent)
+            super(SettingsTab.DetectableWidget, self).__init__(parent)
             self.detectable = detectable
 
             layout = QGridLayout(self)
@@ -181,7 +207,7 @@ class UnderwatchTab(QWidget):
             combo_box.setMinimumWidth(200)
             combo_box.addItem("Momentary Points")
             combo_box.addItem("Points Per Second")
-            if (detectable[1]["Duration"] != 1):
+            if detectable[1]["Duration"] != 1:
                 combo_box.addItem("Points Over Duration")
             combo_box.setCurrentIndex(detectable[1]["Type"])
             combo_box.currentIndexChanged.connect(self.update_points_type)
@@ -202,10 +228,30 @@ class UnderwatchTab(QWidget):
             save_to_file()
 
     def update(self):
-        if (self.score_input_box.hasFocus() == False):
+        if self.score_input_box.hasFocus() == False:
             self.score_input_box.blockSignals(True)
             self.score_input_box.setValue(int(self.computer_vision.score_over_time))
             self.score_input_box.blockSignals(False)
+
+class AboutTab(QWidget):
+    def __init__(self, parent) -> None:
+        super(AboutTab, self).__init__(parent)
+        layout = QGridLayout(self)
+        layout.setAlignment(Qt.AlignTop)
+        layout.setContentsMargins(5, 10, 5, 5)
+        
+        text = QTextBrowser(self)
+        text.setStyleSheet("border: 0px solid black;")
+        text.setOpenExternalLinks(True)
+        text.setText(
+            """
+            <p>Made by Furimanejo.
+            <p>For more information and instructions check this project's page hosted at <a href="https://github.com/Furimanejo/Underwatch-Ultimate">Github</a>.
+            <p>If you need further support you can reach out to me at my <a href="https://discord.com/invite/wz2qvkuEyJ">Discord Server</a>.
+            <p>Want to sponsor this project? I accept donations at <a href="https://donate.stripe.com/7sI3eZcExdGrc5WeUU">Stripe</a>.
+            """
+        )
+        layout.addWidget(text, 0, 0)
 
 class Worker(QThread):
     def __init__(self, funtion):
@@ -221,7 +267,7 @@ def set_config(key, value):
 
 def set_image_to_label(image, label):
     #h, w, ch = 0
-    if(len(image.shape) == 2):
+    if len(image.shape) == 2:
         h, w = image.shape
         ch = 1
     else:
@@ -233,6 +279,19 @@ def set_image_to_label(image, label):
     qImage = convert_to_Qt_format.scaled(width, heigth, Qt.KeepAspectRatio)
     label.setPixmap(QPixmap(qImage))
 
+def exception_hook(type, value, tb):
+    print("Exception hooked:")
+    import traceback
+    txt = ''.join(traceback.format_exception(type, value, tb))
+    print(txt)
+    input("Press any key to exit...")
+
+sys.excepthook = exception_hook
 app = QApplication(sys.argv)
 app_window = GUI()
-sys.exit(app.exec())
+app.exec()
+
+try:
+    input("Press any key to exit...")
+except:
+    pass

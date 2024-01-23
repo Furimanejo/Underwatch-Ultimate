@@ -2,28 +2,170 @@ from copy import deepcopy
 import json
 import os
 
+aspect_ratios = {
+    0 : {
+        "id" : "16:9",
+        "sample_w": 1920,
+        "sample_h": 1080,
+    },
+    1: {
+        "id" : "21:9",
+        "sample_w": 2560,
+        "sample_h": 1080,
+    },    
+}
+
 config = {
     "monitor_number": 1,
+    "aspect_ratio_index": 0,
     "show_overlay_mode": 0,
     "show_regions_mode": 0,
     "ignore_spectate": True,
     "ignore_redundant_assists": True,
     "decay": 100,
     "regions": {
-        "KillcamOrPOTG": {"OriginalRect": [110, 160, 1200, 1600], "MaxMatches": 1},
-
-        "Popup1": {"OriginalRect": [750, 780, 750, 960], "MaxMatches": 1},
-        "Popup2": {"OriginalRect": [785, 815, 750, 960], "MaxMatches": 1},
-        "Popup3": {"OriginalRect": [820, 850, 750, 960], "MaxMatches": 1},
-
-        "Give Harmony Orb": {"OriginalRect": [945, 995, 725, 775], "MaxMatches": 1},
-        "Give Discord Orb": {"OriginalRect": [945, 995, 1145, 1195], "MaxMatches": 1},
-        "Give Mercy Heal": {"OriginalRect": [655, 723, 790, 858], "MaxMatches": 1},
-        "Give Mercy Boost": {"OriginalRect": [655, 723, 1062, 1130], "MaxMatches": 1},
-
-        "Receive Heal": {"OriginalRect": [740, 840, 440, 650], "MaxMatches": 2},
-
-        "Receive Status Effect": {"OriginalRect": [840, 895, 160, 300], "MaxMatches": 3},
+        "KillcamOrPOTG": {
+            "1920x1080": {
+                "x": 1200,
+                "y": 110,
+                "w": 400,
+                "h": 50
+            },
+            "2560x1080": {
+                "x": 1840,
+                "y": 110,
+                "w": 400,
+                "h": 50
+            },
+        },
+        "Popup1": {
+            "1920x1080": {
+                "x": 750,
+                "y": 750,
+                "w": 210,
+                "h": 30
+            },
+            "2560x1080": {
+                "x": 1070,
+                "y": 750,
+                "w": 210,
+                "h": 30
+            },
+        },
+        "Popup2": {
+            "1920x1080": {
+                "x": 750,
+                "y": 785,
+                "w": 210,
+                "h": 30
+            },
+            "2560x1080": {
+                "x": 1070,
+                "y": 785,
+                "w": 210,
+                "h": 30
+            },
+        },
+        "Popup3": {
+            "1920x1080": {
+                "x": 750,
+                "y": 820,
+                "w": 210,
+                "h": 30
+            },
+            "2560x1080": {
+                "x": 1070,
+                "y": 820,
+                "w": 210,
+                "h": 30
+            },
+        },
+        "Give Harmony Orb": {
+            "1920x1080": {
+                "x": 725,
+                "y": 945,
+                "w": 50,
+                "h": 50
+            },
+            "2560x1080": {
+                "x": 1045,
+                "y": 945,
+                "w": 50,
+                "h": 50
+            },
+        },
+        "Give Discord Orb": {
+            "1920x1080": {
+                "x": 1145,
+                "y": 945,
+                "w": 50,
+                "h": 50
+            },
+            "2560x1080": {
+                "x": 1465,
+                "y": 945,
+                "w": 50,
+                "h": 50
+            },
+        },
+        "Give Mercy Heal": {
+            "1920x1080": {
+                "x": 790,
+                "y": 655,
+                "w": 68,
+                "h": 68
+            },
+            "2560x1080": {
+                "x": 1110,
+                "y": 655,
+                "w": 68,
+                "h": 68
+            },
+        },
+        "Give Mercy Boost": {
+            "1920x1080": {
+                "x": 1062,
+                "y": 655,
+                "w": 68,
+                "h": 68
+            },
+            "2560x1080": {
+                "x": 1382,
+                "y": 655,
+                "w": 68,
+                "h": 68
+            },
+        },
+        "Receive Heal": {
+            "MaxMatches": 2,
+            "1920x1080": {
+                "x": 440,
+                "y": 740,
+                "w": 210,
+                "h": 100
+            },
+            "2560x1080": {
+                "x": 440,
+                "y": 740,
+                "w": 210,
+                "h": 100
+            },
+        },
+        "Receive Status Effect": {
+            "MaxMatches": 3,
+            "1920x1080": {
+                "x": 160,
+                "y": 840,
+                "w": 140,
+                "h": 55
+            },
+            "2560x1080": {
+                "x": 160,
+                "y": 740,
+                "w": 210,
+                "h": 100
+            },
+        },
     },
     "detectables": {
         "KillcamOrPOTG": {"Filename": "killcam_potg_sobel.png", "Threshold": .75},
@@ -63,6 +205,7 @@ def save_to_file():
 
 def load_from_file():
     if os.path.exists('config.json'):
+        print("Loading config file...")
         with open('config.json', 'r') as f:
             load_dict = json.load(f)
             for key in load_dict.keys():
@@ -72,4 +215,3 @@ def load_from_file():
                             config[key][detectable][field] = load_dict[key][detectable][field]
                 else:
                     config[key] = load_dict[key]
-                    

@@ -16,6 +16,7 @@ class DeviceControlWidget(QWidget):
         self.setup_new_intiface_client()
         self.connect_requested = False
         self.last_send = 0
+        self.min_update_period = 0.1
 
         layout = QGridLayout(self)
 
@@ -85,12 +86,13 @@ class DeviceControlWidget(QWidget):
         self.update_devices_signal.emit()
 
         t = time.time()
-        if (t - self.last_send < 0.1):
+        if t - self.last_send < self.min_update_period:
             return
         self.last_send = t
         
         for device in self.devices:
-            await self.devices[device].send(send_value)
+            if device in self.client.devices:
+                await self.devices[device].send(send_value)
     
     def is_connected(self):
         return self.client._connector != None and self.client._connector.connected
@@ -99,15 +101,22 @@ class DeviceControlWidget(QWidget):
         if self.is_connected():
             for device in self.client.devices:
                 if device not in self.devices:
-                    print("new device found")
+                    print("New device found: " + self.client.devices[device].name)
                     self.devices[device] = self.DeviceWidget(self, self.client.devices[device])
                     self.devices_layout.addWidget(self.devices[device])
+
+        for device in self.devices:
+            if device in self.client.devices:
+                self.devices[device].set_connected(True)
+            else:
+                self.devices[device].set_connected(False)
 
     class DeviceWidget(QGroupBox):
         def __init__(self, parent, device):
             super(DeviceControlWidget.DeviceWidget, self).__init__(device.name, parent = None)
             self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
             self.device = device
+            self.connected = True
             layout = QGridLayout()
             self.setLayout(layout)
 
@@ -116,36 +125,64 @@ class DeviceControlWidget(QWidget):
             layout.addLayout(self.actuators_layout, 0, 0)
 
             for actuator in self.device.actuators:
-                widget = self.ActuatorWidget(self, actuator)
+                widget = self.ActuatorWidget(self, actuator, "Scalar")
                 self.actuators.append(widget)
                 self.actuators_layout.addWidget(widget)
 
-        async def send(self, value):
-            if (self.device.removed):
+            for actuator in self.device.rotatory_actuators:
+                widget = self.ActuatorWidget(self, actuator, "Rotatory")
+                self.actuators.append(widget)
+                self.actuators_layout.addWidget(widget)
+
+            for actuator in self.device.linear_actuators:
+                widget = self.ActuatorWidget(self, actuator, "Linear")
+                self.actuators.append(widget)
+                self.actuators_layout.addWidget(widget)
+        
+        def set_connected(self, value):
+            if value == self.connected:
                 return
-            for actuator in self.actuators:
-                await actuator.send(value)
+            if value == False:
+                print("Device disconnected: " + self.device.name)
+            else:
+                print("Device reconnected: " + self.device.name)
+            self.connected = value
+
+        async def send(self, value):
+            if self.connected:
+                for actuator in self.actuators:
+                    await actuator.send(value)
 
         class ActuatorWidget(QGroupBox):
-            def __init__(self, parent, actuator):
+            def __init__(self, parent, actuator, actuator_type = "Scalar"):
                 name = str(actuator.index) + ": " + actuator.type
                 super(DeviceControlWidget.DeviceWidget.ActuatorWidget, self).__init__(name, parent = None)
                 self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
                 self.actuator = actuator
+                self.actuator_type = actuator_type
+                self.linear_value = 0
+                self.linear_direction = 1
+                self.last_sent_time = 0
 
                 layout = QGridLayout()
                 self.setLayout(layout)
 
-                min_intensity_label = QLabel("Min Intensity (%):")
+                intensity_name = "Intensity (%)"
+                max_intensity_value = 100
+                if actuator_type == "Linear":
+                    intensity_name = "BPM"
+                    max_intensity_value = 999
+
+                min_intensity_label = QLabel("Min " + intensity_name + ":")
                 self.min_intensity = QSpinBox()
-                self.min_intensity.setRange(0, 100)
+                self.min_intensity.setRange(0, max_intensity_value)
                 self.min_intensity.setValue(0)
                 self.min_intensity.setSingleStep(10)
                 self.min_intensity.wheelEvent = lambda event: None
 
-                max_intensity_label = QLabel("Max Intensity (%):")
+                max_intensity_label = QLabel("Max " + intensity_name + ":")
                 self.max_intensity = QSpinBox()
-                self.max_intensity.setRange(0, 100)
+                self.max_intensity.setRange(0, max_intensity_value)
                 self.max_intensity.setValue(100)
                 self.max_intensity.setSingleStep(10)
                 self.max_intensity.wheelEvent = lambda event: None
@@ -178,8 +215,8 @@ class DeviceControlWidget(QWidget):
                 try:
                     min_value = self.min_score.value()
                     max_value = self.max_score.value()
-                    min_intensity = self.min_intensity.value()/100
-                    max_intensity = self.max_intensity.value()/100
+                    min_intensity = self.min_intensity.value()
+                    max_intensity = self.max_intensity.value()
 
                     if (min_value == max_value):
                         max_value = min_value + 1
@@ -187,10 +224,36 @@ class DeviceControlWidget(QWidget):
                     inverse_lerp = (value - min_value ) / (max_value - min_value)
                     inverse_lerp = min(1, max(0, inverse_lerp))
 
-                    send_value = (1-inverse_lerp) * min_intensity + inverse_lerp * max_intensity
-                    send_value = min(1, max(0, send_value))
+                    current_intensity = (1-inverse_lerp) * min_intensity + inverse_lerp * max_intensity
 
-                    await self.actuator.command(send_value)
+                    t = time.time()
+                    delta_time = t - self.last_sent_time
+                    delta_time = min(delta_time, 1)
+                    self.last_sent_time = t
+
+                    if self.actuator_type == "Scalar":
+                        send_value = min(1, max(0, current_intensity/100))
+                        await self.actuator.command(send_value)
+
+                    elif self.actuator_type == "Rotatory":
+                        send_value = min(1, max(0, current_intensity/100))
+                        await self.actuator.command(send_value, True)
+
+                    elif self.actuator_type == "Linear":
+                        self.linear_value += self.linear_direction * delta_time * current_intensity / 60
+
+                        if self.linear_value >= 1:
+                            self.linear_value = 1
+                            self.linear_direction = -1
+
+                        if self.linear_value <= 0:
+                            self.linear_value = 0
+                            self.linear_direction = 1
+
+                        await self.actuator.command(int(delta_time*1000), self.linear_value)
+
+                    else:
+                        print("Send command not defined for actuator of type: " + self.actuator_type)
 
                 except buttplug.ButtplugError as e:
                     print(e.args)
