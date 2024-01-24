@@ -155,7 +155,11 @@ class DeviceControlWidget(QWidget):
 
         class ActuatorWidget(QGroupBox):
             def __init__(self, parent, actuator, actuator_type = "Scalar"):
-                name = str(actuator.index) + ": " + actuator.type
+                name = str(actuator.index) + ": "
+                if hasattr(actuator, "type"):
+                    name += actuator.type
+                else:
+                    name += actuator_type
                 super(DeviceControlWidget.DeviceWidget.ActuatorWidget, self).__init__(name, parent = None)
                 self.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
                 self.actuator = actuator

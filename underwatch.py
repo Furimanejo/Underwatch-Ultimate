@@ -1,5 +1,4 @@
 import sys
-import os
 import asyncio
 from time import sleep
 
@@ -281,6 +280,7 @@ def set_image_to_label(image, label):
 
 def exception_hook(type, value, tb):
     print("Exception hooked:")
+    QCoreApplication.quit()
     import traceback
     txt = ''.join(traceback.format_exception(type, value, tb))
     print(txt)
