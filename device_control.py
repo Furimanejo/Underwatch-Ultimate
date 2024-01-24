@@ -244,7 +244,7 @@ class DeviceControlWidget(QWidget):
                         await self.actuator.command(send_value, True)
 
                     elif self.actuator_type == "Linear":
-                        self.linear_value += self.linear_direction * delta_time * current_intensity / 60
+                        self.linear_value += self.linear_direction * delta_time * current_intensity / 60 * 2
 
                         if self.linear_value >= 1:
                             self.linear_value = 1
