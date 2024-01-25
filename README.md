@@ -8,7 +8,7 @@ An application to controls sex toys based on Overwatch 2 gameplay. Here's a [lis
 
 # Current Features:
 The app mainteins a score and uses that score to control the connected toys accordingly. The score goes up when certain visual elements are detected on the screen and goes down gradually over time according to the "score decay" set.
- - Points Per Seconds/Points Over Duration: When the detecion occurs the selected amount of points are added to the score every second, or every X seconds for elements that present a fixed duration, like elimination popups (X = 2.5s).
+ - Points Per Seconds/Points Over Duration: When the detecion occurs the selected amount of points are added to the score every second, or every X seconds for elements that present a fixed duration, like elimination popups (X=2.5s).
  - Momentary points: The selected amount of points is added to the score when the detection occurs and removed when the detection ends, not accumulating over time.
 
 ## Elements Detected:
