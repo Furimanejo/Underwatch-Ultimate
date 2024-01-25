@@ -244,17 +244,18 @@ class DeviceControlWidget(QWidget):
                         await self.actuator.command(send_value, True)
 
                     elif self.actuator_type == "Linear":
-                        self.linear_value += self.linear_direction * delta_time * current_intensity / 60 * 2
+                        half_period = 2 * current_intensity / 60 
+                        self.linear_value += self.linear_direction * delta_time * half_period
 
                         if self.linear_value >= 1:
                             self.linear_value = 1
                             self.linear_direction = -1
+                            await self.actuator.command(int(1000*half_period), self.linear_value)
 
-                        if self.linear_value <= 0:
+                        elif self.linear_value <= 0:
                             self.linear_value = 0
                             self.linear_direction = 1
-
-                        await self.actuator.command(int(delta_time*1000), self.linear_value)
+                            await self.actuator.command(int(1000*half_period), self.linear_value)
 
                     else:
                         print("Send command not defined for actuator of type: " + self.actuator_type)
