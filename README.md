@@ -13,13 +13,14 @@ The app mainteins a score and uses that score to control the connected toys acco
 
 ## Elements Detected:
 - Popup of eliminations, assist, saves, eliminated(self).
+- Prompts: "Stuck", "Detected", "Life Gripped", "Hacked", "Hindered", "Reviving", "Pinned", "Sleep", "Stunned", "Trapped" and "Revealed".
 - Applying Mercy's healing and boost, Zenyatta's harmony and discord orbs.
 - Receiving Mercy's healing and boost, Zenyatta's harmony and discord orbs, Ana's healing buff and debuff, Baptiste's immortality field, and Sombra's Hacked.
 
 # Observations:
 - If you want to use the overlay, make sure your game is running in borderless display mode.
 - The gameplay detection should work even with custom color schemes, let me know if it doesn't.
-- Currently there's support for resolutions of 16:9 and 21:9 aspect ratios.
+- Currently there's support for 16:9, 21:9 and 16:10 resolutions.
 - For multiple monitors setups: you can change the montitor where the detection occurs by editing the variable "monitor_number" in the generated config file "config.json".
 
 # Support:
