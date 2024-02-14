@@ -14,7 +14,7 @@ class ComputerVision():
         self.score_over_time = 0
         self.score_instant = 0
 
-        self.prompt_detectables = ["Stuck", "Detected", "Life Gripped", "Hacked", "Hindered", "Reviving", "Pinned", "Sleep", "Stuck", "Stunned", "Trapped", "Revealed"]
+        self.prompt_detectables = ["Stuck", "Detected", "Life Gripped", "Hacked", "Hindered", "Reviving", "Pinned", "Sleep", "Stunned", "Trapped", "Revealed"]
         self.filters = {
             "KillcamOrPOTG": self.sobel_operation,
             "Elimination": self.popup_filter,
