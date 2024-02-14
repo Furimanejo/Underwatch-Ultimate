@@ -1,4 +1,3 @@
-from math import e
 import os
 import time
 import mss
@@ -15,8 +14,19 @@ class ComputerVision():
         self.score_over_time = 0
         self.score_instant = 0
 
+        self.prompt_detectables = ["Stuck", "Detected", "Life Gripped", "Hacked", "Hindered", "Reviving", "Pinned", "Sleep", "Stuck", "Stunned", "Trapped", "Revealed"]
+        self.filters = {
+            "KillcamOrPOTG": self.sobel_operation,
+            "Elimination": self.popup_filter,
+            "Assist": self.popup_filter,
+            "Saved": self.popup_filter,
+        }
+        for d in self.prompt_detectables:
+            self.filters[d] = self.prompt_filter
+
+        self.debug_image = None
         self.detection_rect = {}
-        self.scaling_factor = 1
+        self.resolution_scaling_factor = 1
         self.resolution_changed = False
         self.detect_resolution()
     
@@ -53,7 +63,7 @@ class ComputerVision():
         else:
             print("Setting detection rect: " + str(game_rect))
             self.detection_rect = game_rect
-            self.scaling_factor = scale
+            self.resolution_scaling_factor = scale
             self.detectables_setup()
             return True
 
@@ -63,17 +73,16 @@ class ComputerVision():
             resolution = str(aspect_ratios[i]["sample_w"]) + "x" + str(aspect_ratios[i]["sample_h"])
             rect = config["regions"][region].get(resolution)
             if rect == None:
-                print(resolution)
-                print("Region " + region + " not defined for current aspect ratio")
+                print("Region \"" + region + "\" not defined for current aspect ratio")
                 rect = config["regions"][region].get("1920x1080")
 
             config["regions"][region]["ScaledRect"] = self.scale_rect(rect)
             config["regions"][region]["Matches"] = []
 
         for item in config["detectables"]:
-            config["detectables"][item]["Template"] = self.load_and_scale_template(config["detectables"][item]["Filename"])
-            if item in ["Elimination", "Assist", "Saved"]:
-                config["detectables"][item]["Template"] = self.popup_filter(config["detectables"][item]["Template"])
+            self.load_and_scale_template(config["detectables"][item])
+            if item in self.filters:
+                config["detectables"][item]["template"] = self.filters[item](config["detectables"][item]["template"])
     
     def set_score(self, value):
         self.score_over_time = value;
@@ -93,15 +102,7 @@ class ComputerVision():
         for d in config["detectables"]:
             config["detectables"][d]["Count"] = 0
 
-        on_killcam = False
-        if config["ignore_spectate"]:
-            on_killcam = self.update_killcam_or_potg()
-        
-        if on_killcam == False:
-            regions_to_crop = [r for r in config["regions"] if r != "KillcamOrPOTG"]
-            self.grab_frame_cropped_to_regions(regions_to_crop)
-            self.update_popup_detection()
-            self.update_other_detections()
+        self.update_detections()
         
         if config["ignore_redundant_assists"]:
             config["detectables"]["Assist"]["Count"] = max(0, config["detectables"]["Assist"]["Count"] - config["detectables"]["Elimination"]["Count"])
@@ -110,12 +111,12 @@ class ComputerVision():
         for d in config["detectables"]:
             if d == "KillcamOrPOTG":
                 continue
-            if config["detectables"][d]["Type"] == 0:
-                self.score_instant += config["detectables"][d]["Count"] * config["detectables"][d]["Points"]
-            elif config["detectables"][d]["Type"] == 1:
-                frame_delta_points += config["detectables"][d]["Count"] * config["detectables"][d]["Points"] 
-            elif config["detectables"][d]["Type"] == 2:
-                frame_delta_points += config["detectables"][d]["Count"] * config["detectables"][d]["Points"] / config["detectables"][d]["Duration"]
+            if config["detectables"][d]["type"] == 0:
+                self.score_instant += config["detectables"][d]["Count"] * config["detectables"][d]["points"]
+            elif config["detectables"][d]["type"] == 1:
+                frame_delta_points += config["detectables"][d]["Count"] * config["detectables"][d]["points"] 
+            elif config["detectables"][d]["type"] == 2:
+                frame_delta_points += config["detectables"][d]["Count"] * config["detectables"][d]["points"] / config["detectables"][d]["duration"]
 
         self.score_over_time += delta_time * frame_delta_points
         self.score_over_time -= delta_time * config["decay"] / 60
@@ -126,30 +127,37 @@ class ComputerVision():
         self.detection_ping = (1-a) * self.detection_ping + a * (t1-t0)
         return True
 
-    def update_killcam_or_potg(self):
-        self.grab_frame_cropped_to_regions(["KillcamOrPOTG"])
-        self.match_detectables_on_region("KillcamOrPOTG", ["KillcamOrPOTG"], operation = self.sobel_operation)
-        return config["detectables"]["KillcamOrPOTG"]["Count"] > 0
+    def update_detections(self):
+        upper_regions = ["KillcamOrPOTG", "Prompt"]
+        self.grab_frame_cropped_to_regions(upper_regions)
 
-    def update_popup_detection(self):
+        if config["ignore_spectate"]:
+            self.match_detectables_on_region("KillcamOrPOTG", ["KillcamOrPOTG"])
+            if config["detectables"]["KillcamOrPOTG"]["Count"] > 0:
+                return
+
+        self.match_detectables_on_region("Prompt", self.prompt_detectables)
+
+        lower_regions = [r for r in config["regions"] if r not in upper_regions]
+        self.grab_frame_cropped_to_regions(lower_regions)
+
+        # Popups
         popupRegions = ["Popup1", "Popup2", "Popup3"]
-        popupsToDetect = ["Elimination", "Assist", "Saved", ]
-        
         for region in popupRegions:
-            self.match_detectables_on_region(region, popupsToDetect, operation = self.popup_filter)
-        for region in popupRegions:
-            self.match_detectables_on_region(region, ["Eliminated"])
+            self.match_detectables_on_region(region, ["Elimination", "Assist", "Saved", "Died"])
 
-    def update_other_detections(self):
+        # Hero Specific
         for item in ["Give Harmony Orb", "Give Discord Orb", "Give Mercy Boost", "Give Mercy Heal"]:
             self.match_detectables_on_region(item, [item])
-        
+
+        # Receive Heals
         healDetectables = ["Receive Zen Heal", "Receive Mercy Boost", "Receive Mercy Heal"]
         self.match_detectables_on_region("Receive Heal", healDetectables)
 
+        # Status
         statusDetectables = ["Receive Hack", "Receive Discord Orb", "Receive Anti-Heal", "Receive Heal Boost", "Receive Immortality"]
         self.match_detectables_on_region("Receive Status Effect", statusDetectables)
-
+        
     def get_current_score(self):
         return self.score_over_time + self.score_instant
 
@@ -177,9 +185,9 @@ class ComputerVision():
         with mss.mss() as sct:
             self.frame = np.array(sct.grab((left, top, right, bottom)))[:,:,:3]
     
-    def match_detectables_on_region(self, regionKey, detectableKeys, operation = None):
+    def match_detectables_on_region(self, regionKey, detectableKeys):
         for d in detectableKeys:
-            if config["detectables"][d].get("Points") == 0:
+            if config["detectables"][d].get("points") == 0:
                 detectableKeys.remove(d)
 
         if len(detectableKeys) == 0:
@@ -187,15 +195,43 @@ class ComputerVision():
 
         region_rect = config["regions"][regionKey]["ScaledRect"]
         crop = self.get_cropped_frame_copy(region_rect)
-        if operation is not None:
-            crop = operation(crop)
+
+        filtered_crops = {}
+        for d in detectableKeys:
+            filt = self.filters.get(d)
+            if filt is not None and filt not in filtered_crops:
+                filtered_crops[filt] = filt(crop.copy())
+                
 
         for d in detectableKeys:
+            if d in self.filters:
+                selected_crop = filtered_crops[self.filters[d]]
+            else:
+                selected_crop = crop
+
             max_matches = config["regions"][regionKey].get("MaxMatches", 1)
             if len(config["regions"][regionKey]["Matches"]) >= max_matches:
                 break
-            match_max_value = self.match_template(crop,config["detectables"][d]["Template"])
-            if match_max_value > config["detectables"][d]["Threshold"]:
+
+            if d in self.prompt_detectables:
+                # To save performance and avoid false positives: crop the selected crop to the center, to fit the template's width
+                template_w = config["detectables"][d]["template"].shape[1]
+                crop_w = selected_crop.shape[1]
+                left = int((crop_w - template_w)/2)
+                right = left + template_w
+                left = max(left - 3, 0)
+                right = min(right + 3, crop_w)
+                selected_crop = selected_crop[:,left:right,:]
+
+            r_shape = selected_crop.shape
+            t_shape = config["detectables"][d]["template"].shape
+            if t_shape[0] > r_shape[0] or t_shape[1] > r_shape[1]:
+                print("Template {0}({1}) is bigger than region {2}".format(d, t_shape, r_shape))
+                return
+
+            match_max_value = self.match_template(selected_crop, config["detectables"][d]["template"])
+            
+            if match_max_value > config["detectables"][d]["threshold"]:
                 config["detectables"][d]["Count"] += 1
                 config["regions"][regionKey]["Matches"].append(d)
             
@@ -220,6 +256,17 @@ class ComputerVision():
 
     def sobel_operation(self, frame):
         return cv.Sobel(frame, ddepth= cv.CV_8U, dx = 0, dy = 1, ksize = 3)
+    
+    def prompt_filter(self, frame):
+        hsv = cv.cvtColor(frame, cv.COLOR_BGR2HSV)
+        (h, s, v) = cv.split(hsv)
+        mean_v = cv.mean(v)[0]
+        t = 200
+        if mean_v > t:
+            v = s
+        v = cv.Canny(v, t, 0)
+        v = cv.dilate(v, np.ones((3,3), np.uint8), iterations= 1)
+        return cv.merge((v, v, v))
 
     def get_cropped_frame_copy(self, rect):
         top = rect["y"] - self.frame_offset[0]
@@ -230,18 +277,21 @@ class ComputerVision():
 
     def scale_rect(self, rect):
         scaled_rect = {
-            "x": int (rect["x"] * self.scaling_factor),
-            "y": int (rect["y"] * self.scaling_factor),
-            "w": int (rect["w"] * self.scaling_factor),
-            "h": int (rect["h"] * self.scaling_factor)
+            "x": int (rect["x"] * self.resolution_scaling_factor),
+            "y": int (rect["y"] * self.resolution_scaling_factor),
+            "w": int (rect["w"] * self.resolution_scaling_factor),
+            "h": int (rect["h"] * self.resolution_scaling_factor)
         }
         return scaled_rect
     
-    def load_and_scale_template(self, file_name):
-        path = os.path.join(os.path.abspath("."), "templates", file_name)
-        template = cv.imread(path)
-        
-        height = int(template.shape[0] * self.scaling_factor)
-        width =  int(template.shape[1] * self.scaling_factor)
+    def load_and_scale_template(self, item):
+        path = os.path.join(os.path.abspath("."), "templates", item["filename"])
+        base_template = cv.imread(path)
 
-        return cv.resize(template, (width, height))
+        template_scaling = aspect_ratios[config["aspect_ratio_index"]].get("template_scaling", 1)
+        height = int(base_template.shape[0] * self.resolution_scaling_factor * template_scaling)
+        width =  int(base_template.shape[1] * self.resolution_scaling_factor * template_scaling)
+        scaled = cv.resize(base_template.copy(), (width, height))
+
+        item["original_image"] = base_template
+        item["template"] = scaled

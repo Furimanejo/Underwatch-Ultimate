@@ -12,7 +12,13 @@ aspect_ratios = {
         "id" : "21:9",
         "sample_w": 2560,
         "sample_h": 1080,
-    },    
+    },
+    2: {
+        "id" : "16:10",
+        "sample_w": 1680,
+        "sample_h": 1050,
+        "template_scaling": 1680/1920
+    },
 }
 
 config = {
@@ -32,7 +38,13 @@ config = {
                 "h": 50
             },
             "2560x1080": {
-                "x": 1840,
+                "x": 1520,
+                "y": 110,
+                "w": 400,
+                "h": 50
+            },
+            "1680x1050":{
+                "x": 1080,
                 "y": 110,
                 "w": 400,
                 "h": 50
@@ -51,6 +63,12 @@ config = {
                 "w": 210,
                 "h": 30
             },
+            "1680x1050": {
+                "x": 1680/2-185,
+                "y": 656,
+                "w": 185,
+                "h": 27
+            },
         },
         "Popup2": {
             "1920x1080": {
@@ -64,6 +82,12 @@ config = {
                 "y": 785,
                 "w": 210,
                 "h": 30
+            },
+            "1680x1050": {
+                "x": 1680/2-185,
+                "y": 656+30,
+                "w": 185,
+                "h": 27
             },
         },
         "Popup3": {
@@ -79,6 +103,12 @@ config = {
                 "w": 210,
                 "h": 30
             },
+            "1680x1050": {
+                "x": 1680/2-185,
+                "y": 656+30+30,
+                "w": 185,
+                "h": 27
+            },
         },
         "Give Harmony Orb": {
             "1920x1080": {
@@ -92,6 +122,12 @@ config = {
                 "y": 945,
                 "w": 50,
                 "h": 50
+            },
+            "1680x1050": {
+                "x": 635,
+                "y": 932,
+                "w": 45,
+                "h": 45
             },
         },
         "Give Discord Orb": {
@@ -107,6 +143,12 @@ config = {
                 "w": 50,
                 "h": 50
             },
+            "1680x1050": {
+                "x": 1000,
+                "y": 932,
+                "w": 45,
+                "h": 45
+            },
         },
         "Give Mercy Heal": {
             "1920x1080": {
@@ -121,6 +163,12 @@ config = {
                 "w": 68,
                 "h": 68
             },
+            "1680x1050": {
+                "x": 690,
+                "y": 625,
+                "w": 60,
+                "h": 60
+            },
         },
         "Give Mercy Boost": {
             "1920x1080": {
@@ -134,6 +182,12 @@ config = {
                 "y": 655,
                 "w": 68,
                 "h": 68
+            },
+            "1680x1050": {
+                "x": 930,
+                "y": 625,
+                "w": 60,
+                "h": 60
             },
         },
         "Receive Heal": {
@@ -150,6 +204,12 @@ config = {
                 "w": 210,
                 "h": 100
             },
+            "1680x1050": {
+                "x": 385,
+                "y": 750,
+                "w": 200,
+                "h": 90
+            },
         },
         "Receive Status Effect": {
             "MaxMatches": 3,
@@ -165,30 +225,67 @@ config = {
                 "w": 140,
                 "h": 55
             },
+            "1680x1050": {
+                "x": 144,
+                "y": 848,
+                "w": 120,
+                "h": 36
+            },
         },
+        "Prompt":{
+            "1920x1080": {
+                "x": (1920-300)/2,
+                "y": 228,
+                "w": 300,
+                "h": 58
+            },
+            "2560x1080": {
+                "x": (2560-300)/2,
+                "y": 228,
+                "w": 300,
+                "h": 58
+            },
+            "1680x1050": {
+                "x": (1680-265)/2,
+                "y": 200,
+                "w": 265,
+                "h": 52
+            },
+        }
     },
     "detectables": {
-        "KillcamOrPOTG": {"Filename": "killcam_potg_sobel.png", "Threshold": .75},
-
-        "Elimination": {"Filename": "elimination.png", "Threshold": .8, "Points": 25, "Type": 2, "Duration": 2.5},
-        "Assist": {"Filename": "assist.png", "Threshold": .8, "Points": 20, "Type": 2, "Duration": 2.5},
-        "Saved": {"Filename": "saved.png", "Threshold": .8, "Points": 30 ,"Type": 2, "Duration": 2.5},
-        "Eliminated": {"Filename": "you_were_eliminated.png", "Threshold": .8, "Points": 0 ,"Type": 2, "Duration": 2.5},
-    
-        "Give Harmony Orb": {"Filename": "apply_harmony.png", "Threshold": .9, "Points": 10, "Type": 0, "Duration": 1},
-        "Give Discord Orb": {"Filename": "apply_discord.png", "Threshold": .9, "Points": 20, "Type": 0, "Duration": 1},
-        "Give Mercy Heal": {"Filename": "apply_mercy_heal.png", "Threshold": .7, "Points": 10, "Type": 0, "Duration": 1},
-        "Give Mercy Boost": {"Filename": "apply_mercy_boost.png", "Threshold": .7, "Points": 20, "Type": 0, "Duration": 1},
-    
-        "Receive Zen Heal": {"Filename": "receive_zen_heal.png", "Threshold": .8, "Points": 10, "Type": 0, "Duration": 1},
-        "Receive Mercy Heal": {"Filename": "receive_mercy_heal.png", "Threshold": .8, "Points": 15, "Type": 0, "Duration": 1},
-        "Receive Mercy Boost": {"Filename": "receive_mercy_boost.png", "Threshold": .8, "Points": 25, "Type": 0, "Duration": 1},
-        
-        "Receive Hack": {"Filename": "receive_hack_icon.png", "Threshold": .8, "Points": 100, "Type": 0, "Duration": 1},
-        "Receive Discord Orb": {"Filename": "receive_discord.png", "Threshold": .8, "Points": -20, "Type": 1, "Duration": 1},
-        "Receive Anti-Heal": {"Filename": "receive_purple_pot.png", "Threshold": .8, "Points": -50, "Type": 0, "Duration": 1},
-        "Receive Heal Boost": {"Filename": "receive_yellow_pot.png", "Threshold": .8, "Points": 20, "Type": 0, "Duration": 1},
-        "Receive Immortality": {"Filename": "receive_immortality.png", "Threshold": .8, "Points": 20, "Type": 0, "Duration": 1},
+        "KillcamOrPOTG": {"filename": "killcam_potg_sobel.png", "threshold": .75},
+        # Popup
+        "Elimination": {"filename": "elimination.png", "threshold": .8, "points": 25, "type": 2, "duration": 2.5},
+        "Assist": {"filename": "assist.png", "threshold": .8, "points": 20, "type": 2, "duration": 2.5},
+        "Saved": {"filename": "saved.png", "threshold": .8, "points": 30 ,"type": 2, "duration": 2.5},
+        "Died": {"filename": "died.png", "threshold": .8, "points": 0 ,"type": 2, "duration": 2.5},
+        # Prompt
+        "Detected": {"filename": "prompt_detected.png", "threshold": .5, "points": 100, "type": 0},
+        "Life Gripped": {"filename": "prompt_gripped.png", "threshold": .5, "points": 100, "type": 0},
+        "Hacked": {"filename": "prompt_hacked.png", "threshold": .5, "points":100, "type": 0},
+        "Hindered": {"filename": "prompt_hindered.png", "threshold": .5, "points": 100, "type": 0},
+        "Reviving": {"filename": "prompt_reviving.png", "threshold": .5, "points": 100, "type": 0},
+        "Pinned": {"filename": "prompt_pinned.png", "threshold": .5, "points": 100, "type": 0},
+        "Revealed": {"filename": "prompt_revealed.png", "threshold": .5, "points": 100, "type": 0},
+        "Sleep": {"filename": "prompt_sleep.png", "threshold": .5, "points": 100, "type": 0},
+        "Stuck": {"filename": "prompt_stuck.png", "threshold": .5, "points": 100, "type": 0},
+        "Stunned": {"filename": "prompt_stunned.png", "threshold": .5, "points": 100, "type": 0},
+        "Trapped": {"filename": "prompt_trapped.png", "threshold": .5, "points": 100, "type": 0},
+        # Status
+        "Receive Zen Heal": {"filename": "receive_zen_heal.png", "threshold": .8, "points": 10, "type": 0},
+        "Receive Mercy Heal": {"filename": "receive_mercy_heal.png", "threshold": .8, "points": 15, "type": 0},
+        "Receive Mercy Boost": {"filename": "receive_mercy_boost.png", "threshold": .8, "points": 25, "type": 0},
+        "Receive Hack": {"filename": "receive_hack_icon.png", "threshold": .8, "points": 100, "type": 0},
+        "Receive Discord Orb": {"filename": "receive_discord.png", "threshold": .8, "points": -20, "type": 1},
+        "Receive Anti-Heal": {"filename": "receive_purple_pot.png", "threshold": .8, "points": -50, "type": 0},
+        "Receive Heal Boost": {"filename": "receive_yellow_pot.png", "threshold": .8, "points": 20, "type": 0},
+        "Receive Immortality": {"filename": "receive_immortality.png", "threshold": .8, "points": 20, "type": 0},
+        # Hero Specific
+        "Give Mercy Heal": {"filename": "apply_mercy_heal.png", "threshold": .7, "points": 10, "type": 0},
+        "Give Mercy Boost": {"filename": "apply_mercy_boost.png", "threshold": .7, "points": 20, "type": 0},
+        "Give Harmony Orb": {"filename": "apply_harmony.png", "threshold": .9, "points": 10, "type": 0},
+        "Give Discord Orb": {"filename": "apply_discord.png", "threshold": .9, "points": 20, "type": 0},
     }
 }
 
@@ -197,7 +294,7 @@ def save_to_file():
     del save_dict["regions"]
     for det in save_dict["detectables"].values():
         for field in list(det.keys()):
-            if (field not in ["Points", "Type"]):
+            if (field not in ["points", "type"]):
                 del det[field]
 
     with open('config.json', 'w') as f:

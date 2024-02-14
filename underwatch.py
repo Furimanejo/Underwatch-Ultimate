@@ -1,10 +1,9 @@
 import sys
 import asyncio
-from time import sleep
 
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
-from PyQt5.QtGui import *
+from PyQt5.QtGui import QImage, QPixmap, QPalette
 
 from computer_vision import ComputerVision
 from overlay import Overlay
@@ -192,13 +191,13 @@ class SettingsTab(QWidget):
             image.setMinimumHeight(mininum_height)
             image.setMinimumWidth(60)
             image.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            set_image_to_label(detectable[1]["Template"], image)
+            set_image_to_label(detectable[1]["original_image"], image)
 
             spin_box = QSpinBox(self)
             spin_box.setMinimumHeight(mininum_height)
             spin_box.setMaximum(999)
             spin_box.setMinimum(-999)
-            spin_box.setValue(detectable[1]["Points"])
+            spin_box.setValue(detectable[1]["points"])
             spin_box.valueChanged.connect(self.update_points)
 
             combo_box = QComboBox(self)
@@ -206,9 +205,9 @@ class SettingsTab(QWidget):
             combo_box.setMinimumWidth(200)
             combo_box.addItem("Momentary Points")
             combo_box.addItem("Points Per Second")
-            if detectable[1]["Duration"] != 1:
+            if detectable[1].get("duration") is not None:
                 combo_box.addItem("Points Over Duration")
-            combo_box.setCurrentIndex(detectable[1]["Type"])
+            combo_box.setCurrentIndex(detectable[1]["type"])
             combo_box.currentIndexChanged.connect(self.update_points_type)
 
             layout.addWidget(image, 0, 0)
@@ -219,11 +218,11 @@ class SettingsTab(QWidget):
             layout.setColumnStretch(1, 1)
 
         def update_points(self, value):
-            self.detectable[1]["Points"] = value;
+            self.detectable[1]["points"] = value;
             save_to_file()
 
         def update_points_type(self, value):
-            self.detectable[1]["Type"] = value;
+            self.detectable[1]["type"] = value;
             save_to_file()
 
     def update(self):

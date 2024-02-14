@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtCore import *
+from PyQt5.QtGui import QImage, QPixmap
 from win32gui import GetWindowText, GetForegroundWindow
 
 from config_handler import config
@@ -134,6 +135,9 @@ class Overlay(QWidget):
         
         self.update_regions()
 
+        if self.cv.debug_image is not None:
+            set_image_to_label(self.cv.debug_image, self.debug_label)
+
         self.points_label.setText("Score: {0:.0f}".format(self.cv.get_current_score()))
         self.detection_delay_label.setText("Detection Delay: {0:4.0f} MS".format(1000 * self.cv.detection_ping))
 
@@ -182,3 +186,17 @@ class Overlay(QWidget):
                     self.regions[region]["Label"].setText(text)
                     self.regions[region]["Label"].show()
                     self.regions[region]["Rect"].show()
+
+def set_image_to_label(image, label):
+    #h, w, ch = 0
+    if len(image.shape) == 2:
+        h, w = image.shape
+        ch = 1
+    else:
+        h, w, ch = image.shape
+    bytes_per_line = ch * w
+    convert_to_Qt_format = QImage(image.data, w, h, bytes_per_line, QImage.Format_BGR888)
+    width = label.width()
+    heigth = label.height()
+    qImage = convert_to_Qt_format.scaled(width, heigth, Qt.KeepAspectRatio)
+    label.setPixmap(QPixmap(qImage))
