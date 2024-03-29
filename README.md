@@ -3,7 +3,7 @@ An application to controls sex toys based on Overwatch 2 gameplay. Here's a [lis
 # Instructions:
 - Install and run [Intiface Central](https://intiface.com/central/).
 - Download and run [a release of Underwatch Ultimate](https://github.com/Furimanejo/Underwatch-Ultimate/releases).
-- One the tab "Device Control" click connect to intiface. Make sure your toys are on and appear on the list of connected devices.
+- On the tab "Device Control" click connect to intiface. Make sure your toys are on and appear on the list of connected devices.
 - Play Overwatch, you can test the app on the training range.
 
 # Current Features:
