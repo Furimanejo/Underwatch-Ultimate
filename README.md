@@ -1,3 +1,5 @@
+DEPRECATED PROJECT: see [Playful Plugins](http://furimanejo.itch.io/playful-plugins) for an up-to-date version of this mod.
+
 An application to controls sex toys based on Overwatch 2 gameplay. Here's a [list](https://iostindex.com/?filter0ButtplugSupport=4) of supported devices.
 
 # Instructions:
